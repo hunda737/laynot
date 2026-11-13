@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
 import { Brand } from '@/components/Brand';
+import { CoinsPill, LivesPill } from '@/components/status';
 import { Button, Card, Icon, IconButton, Pill, Screen, Txt, type IconName } from '@/components/ui';
 import { useNow } from '@/hooks/useNow';
 import { useT } from '@/i18n';
@@ -18,7 +19,6 @@ export default function Home() {
   const today = dayKey(now);
 
   const profile = useGame((s) => s.profile);
-  const coins = useGame((s) => s.coins);
   const streak = useGame((s) => s.streak);
   const record = useGame((s) => s.dailyHistory[today]);
   const progress = useGame((s) => s.dailyProgress);
@@ -31,14 +31,17 @@ export default function Home() {
     <Screen>
       <View style={styles.top}>
         <Brand size={24} />
-        <View style={styles.pills}>
-          <Pill icon="flame" label={String(streakNow)} color={colors.primary} bg={colors.primarySoft} />
-          <Pill icon="ellipse" label={String(coins)} color={colors.gold} bg={colors.goldSoft} />
-          <IconButton icon="settings-outline" label={t('settings.title')} onPress={() => router.push('/settings')} />
-        </View>
+        <IconButton icon="settings-outline" label={t('settings.title')} onPress={() => router.push('/settings')} />
       </View>
 
-      <Txt variant="title">{profile ? t('home.greeting', { name: profile.name }) : t('home.greetingGuest')}</Txt>
+      <View style={{ gap: space.sm }}>
+        <Txt variant="title">{profile ? t('home.greeting', { name: profile.name }) : t('home.greetingGuest')}</Txt>
+        <View style={styles.pills}>
+          <Pill icon="flame" label={String(streakNow)} color={colors.primary} bg={colors.primarySoft} />
+          <LivesPill onPress={() => router.push('/topics')} />
+          <CoinsPill />
+        </View>
+      </View>
 
       {atRisk && (
         <View style={[styles.banner, { backgroundColor: colors.goldSoft }]}>
@@ -91,8 +94,8 @@ export default function Home() {
       </View>
 
       <Txt variant="heading">{t('home.modes')}</Txt>
-      <ModeCard icon="mic" title={t('home.streetTitle')} body={t('home.streetBody')} soon={t('home.soon')} />
-      <ModeCard icon="grid" title={t('home.topicsTitle')} body={t('home.topicsBody')} soon={t('home.soon')} />
+      <ModeCard icon="mic" title={t('home.streetTitle')} body={t('home.streetBody')} onPress={() => router.push('/street')} />
+      <ModeCard icon="grid" title={t('home.topicsTitle')} body={t('home.topicsBody')} onPress={() => router.push('/topics')} />
     </Screen>
   );
 }

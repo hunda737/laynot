@@ -120,7 +120,13 @@ export default function DailyPlay() {
       />
 
       {revealed && (
-        <RevealPanel pq={pq} revealed={revealed} nextLabel={isLast ? t('quiz.finish') : t('quiz.next')} onNext={next} />
+        <RevealPanel
+          pq={pq}
+          revealed={revealed}
+          badge={revealed.mark === 'correct' ? `+${revealed.points} ${t('common.pts')}` : undefined}
+          nextLabel={isLast ? t('quiz.finish') : t('quiz.next')}
+          onNext={next}
+        />
       )}
 
       <ConfirmDialog

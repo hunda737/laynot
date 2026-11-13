@@ -4,7 +4,7 @@ import { Share, StyleSheet, View } from 'react-native';
 import { Button, Card, Icon, IconButton, Pill, Screen, Txt } from '@/components/ui';
 import { useNow } from '@/hooks/useNow';
 import { formatDay, useT } from '@/i18n';
-import { QUESTION_BY_ID } from '@/data/questions';
+import { questionById } from '@/data';
 import { dailyNumber, dayKey, formatCountdown, msUntilNextDay } from '@/lib/clock';
 import { shareGrid, type AnswerMark } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
@@ -100,7 +100,7 @@ export default function DailyResult() {
 
       <Txt variant="heading">{t('result.review')}</Txt>
       {record.answers.map((a, i) => {
-        const q = QUESTION_BY_ID[a.questionId];
+        const q = questionById(a.questionId);
         if (!q) return null;
         const good = a.mark === 'correct';
         return (

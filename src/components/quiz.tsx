@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, Pressable, StyleSheet, View } from 'react-native';
 
 import { useT, type StringKey } from '@/i18n';
@@ -155,11 +155,17 @@ export function RevealPanel({
   revealed,
   nextLabel,
   onNext,
+  badge,
+  children,
 }: {
   pq: PlayableQuestion;
   revealed: AnswerLog;
   nextLabel: string;
   onNext: () => void;
+  /** Short text on the right of the title, e.g. "+142 pts" or "−1 life". */
+  badge?: string;
+  /** Extra content between the fact and the button (sponsor message, street stats). */
+  children?: ReactNode;
 }) {
   const { colors } = useTheme();
   const { t, L } = useT();
@@ -180,13 +186,14 @@ export function RevealPanel({
         <Txt variant="heading" tone={good ? 'success' : 'danger'}>
           {t(titles[revealed.mark])}
         </Txt>
-        {good && (
-          <Txt variant="bodyStrong" tone="success">
-            +{revealed.points} {t('common.pts')}
+        {badge && (
+          <Txt variant="bodyStrong" tone={good ? 'success' : 'danger'}>
+            {badge}
           </Txt>
         )}
       </View>
       <Txt tone="text">{L(pq.question.fact)}</Txt>
+      {children}
       <Button label={nextLabel} onPress={onNext} icon="arrow-forward" />
     </View>
   );
