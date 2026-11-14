@@ -7,6 +7,7 @@ import { useBoard } from '@/hooks/useBoard';
 import { useNow } from '@/hooks/useNow';
 import { formatDay, useT } from '@/i18n';
 import { questionById } from '@/data';
+import { BOTS } from '@/data/players';
 import { dailyNumber, dayKey, formatCountdown, msUntilNextDay } from '@/lib/clock';
 import { shareGrid, type AnswerMark } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
@@ -26,7 +27,7 @@ export default function DailyResult() {
   const profile = useGame((s) => s.profile);
   const promptDismissed = useGame((s) => s.signupPromptDismissed);
   const dismissPrompt = useGame((s) => s.dismissSignupPrompt);
-  const { board } = useBoard('global', 'today');
+  const { board } = useBoard(BOTS, 'today');
   const me = board.find((e) => e.isYou);
 
   if (!record) return <Redirect href="/home" />;

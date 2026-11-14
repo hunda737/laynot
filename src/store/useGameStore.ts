@@ -8,6 +8,7 @@ import { DAY_MS, dayKey, type DayKey } from '@/lib/clock';
 import { DAILY_COUNT } from '@/lib/daily';
 import { correctCoins, type LevelChoice } from '@/lib/difficulty';
 import { FLASH_ROUND_COINS } from '@/lib/flash';
+import { newLeagueId, nextJoiner, type League } from '@/lib/league';
 import { AD_DAILY_CAP, mergeMissed, STARTING_COINS } from '@/lib/economy';
 import { FAST_REFILL_MS, gainLife, loseLife, MAX_LIVES, REFILL_MS, settleLives } from '@/lib/lives';
 import { samplePlayer } from '@/lib/sample';
@@ -81,6 +82,8 @@ interface PersistedState {
   missed: string[];
   /** Last difficulty picked for Topic Play and Flash Cards. */
   topicLevel: LevelChoice;
+  /** Private leagues on this phone, besides the built-in Friends league. */
+  leagues: League[];
   /** Flash Cards: rounds finished, cards seen and cards marked "Got it" on the first try. */
   flashStats: FlashStats;
   /** Demo only: whole days added to the real clock. */
@@ -110,6 +113,12 @@ interface Actions {
   resolveMissed: (questionId: string) => void;
   /** Record a Flash Cards round. Only a round played to the end pays the flat reward. */
   finishFlashRound: (seen: number, knownFirstTry: number, completed: boolean) => number;
+  createLeague: (name: string) => League;
+  /** Join from an invite. Returns the league, and whether it was already on this phone. */
+  joinLeague: (invite: { id: string; name: string }) => { league: League; already: boolean };
+  leaveLeague: (id: string) => void;
+  /** Demo: the next demo player joins a league. Returns their name. */
+  demoLeagueJoin: (id: string) => string | null;
   demoEmptyLives: () => void;
   demoResetAds: () => void;
   /** Replace progress with a returning player who has a 6-day streak. Keeps language and theme. */
@@ -139,6 +148,7 @@ const initialState = (): PersistedState => ({
   streetResults: {},
   missed: [],
   topicLevel: 'mixed',
+  leagues: [],
   flashStats: { rounds: 0, seen: 0, known: 0 },
   dayOffset: 0,
   fastRefill: false,
@@ -280,6 +290,28 @@ export const useGame = create<GameState>()(
           coins: s.coins + earned,
         }));
         return earned;
+      },
+
+      createLeague: (name) => {
+        const league: League = { id: newLeagueId(), name: name.trim(), mine: true, joinedDay: todayKey(), extra: [] };
+        set((s) => ({ leagues: [...s.leagues, league] }));
+        return league;
+      },
+      joinLeague: (invite) => {
+        const existing = get().leagues.find((l) => l.id === invite.id);
+        if (existing) return { league: existing, already: true };
+        const league: League = { ...invite, mine: false, joinedDay: todayKey(), extra: [] };
+        set((s) => ({ leagues: [...s.leagues, league] }));
+        return { league, already: false };
+      },
+      leaveLeague: (id) => set((s) => ({ leagues: s.leagues.filter((l) => l.id !== id) })),
+      demoLeagueJoin: (id) => {
+        const league = get().leagues.find((l) => l.id === id);
+        if (!league) return null;
+        const bot = nextJoiner(id, league.extra);
+        if (!bot) return null;
+        set((s) => ({ leagues: s.leagues.map((l) => (l.id === id ? { ...l, extra: [...l.extra, bot.id] } : l)) }));
+        return bot.name;
       },
 
       demoEmptyLives: () => set({ lives: 0, livesAnchor: nowTs() }),

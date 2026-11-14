@@ -7,8 +7,9 @@ import {
   lastWeekWinners,
   MIN_DAYS_FOR_PRIZE,
   prizeEligibility,
-  youActivity,
 } from '../leaderboard';
+import { checkChar, DUEL_PREFIX, findCode, LEAGUE_PREFIX, makeCode, normalizeLinkCode } from '../codes';
+import { decodeLeague, encodeLeague, FRIENDS_LEAGUE_ID, leagueMembers, nextJoiner } from '../league';
 
 const you = (scores: Record<string, number> = {}) => ({ name: 'Hana', city: 'Adama', scores });
 
@@ -31,7 +32,7 @@ describe('leaderboard', () => {
   });
 
   it('ranks you among the players and shares ranks on ties', () => {
-    const board = buildBoard({ scope: 'global', period: 'today', today: '2026-11-14', hour: 23, you: you({ '2026-11-14': 1500 }) });
+    const board = buildBoard({ members: BOTS, period: 'today', today: '2026-11-14', hour: 23, you: you({ '2026-11-14': 1500 }) });
     expect(board[0].isYou).toBe(true);
     expect(board[0].rank).toBe(1);
     for (let i = 1; i < board.length; i++) {
@@ -41,20 +42,16 @@ describe('leaderboard', () => {
   });
 
   it('leaves you off the board until you play', () => {
-    const board = buildBoard({ scope: 'global', period: 'week', today: '2026-11-14', hour: 23, you: you() });
+    const board = buildBoard({ members: BOTS, period: 'week', today: '2026-11-14', hour: 23, you: you() });
     expect(board.some((e) => e.isYou)).toBe(false);
   });
 
-  it('shows only friends on the friends board', () => {
-    const board = buildBoard({ scope: 'friends', period: 'week', today: '2026-11-14', hour: 23, you: you() });
-    const friendIds = new Set(BOTS.filter((b) => b.friend).map((b) => b.id));
-    expect(board.every((e) => friendIds.has(e.id))).toBe(true);
-  });
-
-  it('puts new players in a middle league', () => {
-    expect(youActivity({}, '2026-11-14')).toBe(0.6);
-    const daily = Object.fromEntries(Array.from({ length: 10 }, (_, i) => [`2026-11-${String(5 + i).padStart(2, '0')}`, 500]));
-    expect(youActivity(daily, '2026-11-14')).toBe(1);
+  it('shows only league members on a league board', () => {
+    const members = leagueMembers(FRIENDS_LEAGUE_ID);
+    const board = buildBoard({ members, period: 'week', today: '2026-11-14', hour: 23, you: you({ '2026-11-14': 900 }) });
+    const ids = new Set(members.map((b) => b.id));
+    expect(board.filter((e) => !e.isYou).every((e) => ids.has(e.id))).toBe(true);
+    expect(board.some((e) => e.isYou)).toBe(true);
   });
 
   it('returns last week top 3', () => {
@@ -90,5 +87,62 @@ describe('prizes', () => {
   it('rotates the sponsor weekly', () => {
     expect(weeklySponsor('2026-11-10').id).toBe(weeklySponsor('2026-11-15').id);
     expect(weeklySponsor('2026-11-10').id).not.toBe(weeklySponsor('2026-11-17').id);
+  });
+});
+
+describe('share codes', () => {
+  it('round-trips a league invite, including spaces, dots and Amharic', () => {
+    for (const name of ['Office Crew', 'A.B. team', 'የቢሮ ጓደኞች']) {
+      const code = encodeLeague({ id: 'm3x9', name });
+      expect(decodeLeague(code)).toEqual({ id: 'm3x9', name });
+    }
+  });
+
+  it('finds a code inside a pasted message, even with a full stop after it', () => {
+    const code = encodeLeague({ id: 'm3x9', name: 'Office Crew' });
+    const message = `Join my Laynot league! Open exp://x/--/league/join?c=zzz
+or enter this code: ${code}.`;
+    expect(decodeLeague(message)).toEqual({ id: 'm3x9', name: 'Office Crew' });
+  });
+
+  it('rejects a code that was changed or cut short', () => {
+    const code = encodeLeague({ id: 'm3x9', name: 'Office Crew' });
+    expect(decodeLeague(code.replace('m3x9', 'm3x8'))).toBeNull();
+    expect(decodeLeague(code.slice(0, -1))).toBeNull();
+    expect(decodeLeague('hello')).toBeNull();
+  });
+
+  it('repairs a link code that the router decoded twice', () => {
+    for (const name of ['Coffee Club', 'የቢሮ ጓደኞች']) {
+      const code = encodeLeague({ id: 'm3x9', name });
+      const twiceDecoded = decodeURIComponent(code);
+      expect(decodeLeague(normalizeLinkCode(twiceDecoded))).toEqual({ id: 'm3x9', name });
+      expect(normalizeLinkCode(code)).toBe(code);
+    }
+  });
+
+  it('keeps duel and league codes apart', () => {
+    const league = encodeLeague({ id: 'm3x9', name: 'X' });
+    expect(findCode(league, DUEL_PREFIX)).toBeNull();
+    const duel = makeCode(DUEL_PREFIX, ['1', 'abcd']);
+    expect(findCode(duel, LEAGUE_PREFIX)).toBeNull();
+    expect(findCode(duel, DUEL_PREFIX)).toEqual(['1', 'abcd']);
+    expect(checkChar('x')).toMatch(/^[0-9a-z]$/);
+  });
+});
+
+describe('private leagues', () => {
+  it('gives the same 4-10 demo members for the same id on any phone', () => {
+    const a = leagueMembers('m3x9').map((b) => b.id);
+    expect(leagueMembers('m3x9').map((b) => b.id)).toEqual(a);
+    expect(a.length).toBeGreaterThanOrEqual(4);
+    expect(a.length).toBeLessThanOrEqual(10);
+  });
+
+  it('adds demo joiners without duplicates', () => {
+    const first = nextJoiner('m3x9', [])!;
+    const members = leagueMembers('m3x9', [first.id]);
+    expect(members.filter((b) => b.id === first.id)).toHaveLength(1);
+    expect(nextJoiner('m3x9', [first.id])!.id).not.toBe(first.id);
   });
 });

@@ -30,6 +30,9 @@ export default function Demo() {
   const demoLoadSample = useGame((s) => s.demoLoadSample);
   const addCoins = useGame((s) => s.addCoins);
   const resetAll = useGame((s) => s.resetAll);
+  const leagues = useGame((s) => s.leagues);
+  const demoLeagueJoin = useGame((s) => s.demoLeagueJoin);
+  const [friendNote, setFriendNote] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<'reset' | 'sample' | null>(null);
 
   const done = () => haptic.success();
@@ -107,6 +110,26 @@ export default function Demo() {
           {adsLeft > 0 ? t('ad.left', { n: adsLeft }) : t('ad.capReached')}
         </Txt>
         <Button label={t('demo.resetAds')} kind="secondary" icon="refresh" onPress={demoResetAds} />
+      </Card>
+
+      <Card>
+        <Txt variant="bodyStrong">{t('ranks.private')}</Txt>
+        <Button
+          label={t('demo.leagueJoin')}
+          kind="secondary"
+          icon="person-add"
+          onPress={() => {
+            const target = leagues[leagues.length - 1];
+            const who = target ? demoLeagueJoin(target.id) : null;
+            setFriendNote(target && who ? t('demo.leagueJoined', { name: who, league: target.name }) : t('demo.noLeague'));
+            if (who) done();
+          }}
+        />
+        {friendNote && (
+          <Txt variant="small" tone="muted">
+            {friendNote}
+          </Txt>
+        )}
       </Card>
 
       <View style={{ gap: space.sm }}>

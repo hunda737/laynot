@@ -3,6 +3,7 @@ import { STREET_EPISODES } from '@/data/street';
 import { addDays, type DayKey } from './clock';
 import { dailyQuestions } from './daily';
 import { correctCoins } from './difficulty';
+import type { League } from './league';
 import { seeded } from './rng';
 import { dailyCoins, scoreAnswer, type AnswerMark } from './scoring';
 
@@ -76,6 +77,7 @@ export function samplePlayer(today: DayKey, days = 6) {
     topicStats,
     streetResults: { [ep.id]: { correct: 3, total: ep.questions.length, day: addDays(today, -2) } },
     missed: missed.filter((id) => QUESTIONS.some((q) => q.id === id)),
+    leagues: [{ id: 'h4n4', name: 'Office Crew', mine: true, joinedDay: addDays(today, -days), extra: [] }] as League[],
     onboarded: true,
     signupPromptDismissed: true,
   };

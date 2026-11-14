@@ -2,7 +2,8 @@ import { useMemo } from 'react';
 
 import { useT } from '@/i18n';
 import { dayKey } from '@/lib/clock';
-import { buildBoard, type Period, type Scope, type YouInput } from '@/lib/leaderboard';
+import type { Bot } from '@/data/players';
+import { buildBoard, type Period, type YouInput } from '@/lib/leaderboard';
 import { useGame } from '@/store/useGameStore';
 import { useNow } from './useNow';
 
@@ -21,11 +22,12 @@ export function useYouInput(): YouInput {
   );
 }
 
-export function useBoard(scope: Scope, period: Period) {
+/** A live board for the given players. Pass a stable (memoized) member list. */
+export function useBoard(members: readonly Bot[], period: Period) {
   const now = useNow(60_000);
   const today = dayKey(now);
   const hour = new Date(now).getHours();
   const you = useYouInput();
-  const board = useMemo(() => buildBoard({ scope, period, today, hour, you }), [scope, period, today, hour, you]);
+  const board = useMemo(() => buildBoard({ members, period, today, hour, you }), [members, period, today, hour, you]);
   return { board, today, now, you };
 }
