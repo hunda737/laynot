@@ -27,6 +27,7 @@ export default function Profile() {
   const missedCount = useGame((s) => s.missed.length);
   const flash = useGame((s) => s.flashStats);
   const duels = useGame((s) => s.duels);
+  const live = useGame((s) => s.liveStats);
   const record = useMemo(() => {
     const r = { w: 0, l: 0, d: 0 };
     for (const d of duels) {
@@ -136,6 +137,12 @@ export default function Profile() {
         title={t('duel.title')}
         body={t('duel.record', record)}
         onPress={() => router.push('/duels')}
+      />
+      <LinkRow
+        icon="people"
+        title={t('live.title')}
+        body={t('live.stats', { played: live.played, wins: live.wins })}
+        onPress={() => router.push('/live')}
       />
       <LinkRow
         icon="albums"

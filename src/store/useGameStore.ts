@@ -22,6 +22,7 @@ import {
   type Opponent,
 } from '@/lib/duel';
 import { newLeagueId, nextJoiner, type League } from '@/lib/league';
+import { liveCoins } from '@/lib/live';
 import { AD_DAILY_CAP, mergeMissed, STARTING_COINS } from '@/lib/economy';
 import { FAST_REFILL_MS, gainLife, loseLife, MAX_LIVES, REFILL_MS, settleLives } from '@/lib/lives';
 import { samplePlayer } from '@/lib/sample';
@@ -99,6 +100,8 @@ interface PersistedState {
   duels: Duel[];
   /** Demo only: demo friends reply to duels within a minute. */
   fastFriends: boolean;
+  /** Live Room games played, games won and best score. */
+  liveStats: { played: number; wins: number; best: number };
   /** Day the sponsored free life was last claimed. */
   sponsoredRefillDay: DayKey;
   /** Private leagues on this phone, besides the built-in Friends league. */
@@ -141,6 +144,8 @@ interface Actions {
   claimDuel: (id: string, theirs: DuelAnswer[], coins: number) => void;
   demoIncomingDuel: () => string;
   demoSetFastFriends: (on: boolean) => void;
+  /** Record a finished Live Room game and pay its coins. */
+  finishLiveRoom: (score: number, correct: number, rank: number) => number;
   /** The once-a-day sponsored life. Returns false if today's is already used. */
   claimSponsoredRefill: () => boolean;
   createLeague: (name: string) => League;
@@ -181,6 +186,7 @@ const initialState = (): PersistedState => ({
   leagues: [],
   duels: [],
   fastFriends: false,
+  liveStats: { played: 0, wins: 0, best: 0 },
   sponsoredRefillDay: '',
   flashStats: { rounds: 0, seen: 0, known: 0 },
   dayOffset: 0,
@@ -361,6 +367,15 @@ export const useGame = create<GameState>()(
         return bot.name;
       },
       demoSetFastFriends: (fastFriends) => set({ fastFriends }),
+
+      finishLiveRoom: (score, correct, rank) => {
+        const coins = liveCoins(correct, rank);
+        set((s) => ({
+          liveStats: { played: s.liveStats.played + 1, wins: s.liveStats.wins + (rank === 1 ? 1 : 0), best: Math.max(s.liveStats.best, score) },
+          coins: s.coins + coins,
+        }));
+        return coins;
+      },
 
       claimSponsoredRefill: () => {
         const today = todayKey();

@@ -1,14 +1,33 @@
 import { useEffect, useState } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
+import type { Question } from '@/data/questions';
 import type { StreetQuestion } from '@/data/street';
 import { useT } from '@/i18n';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { Txt } from './ui';
 
-/** How the people on the street answered, one bar per choice, grown in after the reveal. */
-export function StreetStats({ question, order, pick }: { question: StreetQuestion; order: number[]; pick: number | null }) {
+/**
+ * How a group answered, one bar per choice, grown in after the reveal.
+ * `pcts` is the share for each choice, in the same order as `question.choices`.
+ */
+export function ChoiceBars({
+  question,
+  order,
+  pick,
+  pcts,
+  title,
+  bg,
+}: {
+  question: Question;
+  order: number[];
+  pick: number | null;
+  pcts: readonly number[];
+  title: string;
+  /** Track colour; defaults to the surface colour. */
+  bg?: string;
+}) {
   const { colors } = useTheme();
   const { t, L } = useT();
   const [grow] = useState(() => new Animated.Value(0));
@@ -21,10 +40,10 @@ export function StreetStats({ question, order, pick }: { question: StreetQuestio
   return (
     <View style={{ gap: space.sm }}>
       <Txt variant="tiny" tone="muted">
-        {t('street.statsTitle').toUpperCase()}
+        {title.toUpperCase()}
       </Txt>
       {order.map((choice) => {
-        const pct = question.streetPicks[choice];
+        const pct = pcts[choice] ?? 0;
         const correct = choice === 0;
         const mine = pick === choice;
         return (
@@ -38,7 +57,7 @@ export function StreetStats({ question, order, pick }: { question: StreetQuestio
                 {pct}%
               </Txt>
             </View>
-            <View style={[styles.track, { backgroundColor: colors.surface }]}>
+            <View style={[styles.track, { backgroundColor: bg ?? colors.surface }]}>
               <Animated.View
                 style={[
                   styles.bar,
@@ -53,6 +72,16 @@ export function StreetStats({ question, order, pick }: { question: StreetQuestio
           </View>
         );
       })}
+    </View>
+  );
+}
+
+/** How the people on the street answered. */
+export function StreetStats({ question, order, pick }: { question: StreetQuestion; order: number[]; pick: number | null }) {
+  const { t } = useT();
+  return (
+    <View style={{ gap: space.sm }}>
+      <ChoiceBars question={question} order={order} pick={pick} pcts={question.streetPicks} title={t('street.statsTitle')} />
       <Txt variant="bodyStrong">{t('street.gotRight', { n: question.streetPicks[0] })}</Txt>
     </View>
   );

@@ -16,6 +16,8 @@ export interface Palette {
   gold: string;
   goldSoft: string;
   sponsor: string;
+  /** Sponsor purple dark enough to carry white text, in both themes. */
+  sponsorStrong: string;
   sponsorSoft: string;
   overlay: string;
 }
@@ -38,6 +40,7 @@ export const light: Palette = {
   gold: '#B98400',
   goldSoft: '#FBEFCB',
   sponsor: '#5B3FD0',
+  sponsorStrong: '#5B3FD0',
   sponsorSoft: '#E9E4FB',
   overlay: 'rgba(10, 9, 8, 0.55)',
 };
@@ -60,6 +63,7 @@ export const dark: Palette = {
   gold: '#F5C24C',
   goldSoft: '#3A2F12',
   sponsor: '#A08BFF',
+  sponsorStrong: '#5A43D1',
   sponsorSoft: '#251F42',
   overlay: 'rgba(0, 0, 0, 0.7)',
 };

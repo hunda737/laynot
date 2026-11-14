@@ -37,7 +37,7 @@ export default function LeaguePage() {
     <Screen>
       <Header title={name} onBack={goBack} />
 
-      <View style={[styles.hero, { backgroundColor: colors.sponsor }]}>
+      <View style={[styles.hero, { backgroundColor: colors.sponsorStrong }]}>
         <View style={styles.heroIcon}>
           <Icon name={isFriends ? 'people' : 'shield'} size={30} color={colors.sponsor} />
         </View>

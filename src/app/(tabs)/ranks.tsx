@@ -195,9 +195,8 @@ function Chip({
   dashed?: boolean;
   onPress: () => void;
 }) {
-  const { colors, scheme } = useTheme();
-  // The dark sponsor purple is light, so selected text goes dark there.
-  const activeFg = scheme === 'dark' ? colors.bg : '#FFFFFF';
+  const { colors } = useTheme();
+  const activeFg = '#FFFFFF';
   return (
     <Pressable
       accessibilityRole="button"
@@ -206,8 +205,8 @@ function Chip({
       style={[
         styles.chip,
         {
-          backgroundColor: active ? colors.sponsor : colors.surface,
-          borderColor: active ? colors.sponsor : colors.border,
+          backgroundColor: active ? colors.sponsorStrong : colors.surface,
+          borderColor: active ? colors.sponsorStrong : colors.border,
           borderStyle: dashed ? 'dashed' : 'solid',
         },
       ]}

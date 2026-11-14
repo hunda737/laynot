@@ -199,7 +199,7 @@ function DuelResult({ view, now, fast }: { view: DuelView; now: number; fast: bo
   else if (duel.opponent.kind === 'open') title = t('duel.waitingCode');
   else title = t('duel.waitingFor', { name });
 
-  const heroBg = result === 'win' ? colors.success : result === 'loss' ? colors.danger : result === 'draw' ? colors.gold : colors.sponsor;
+  const heroBg = result === 'win' ? colors.success : result === 'loss' ? colors.danger : result === 'draw' ? colors.gold : colors.sponsorStrong;
 
   return (
     <Screen>

@@ -107,6 +107,7 @@ export default function Home() {
         badge={yourTurn > 0 ? t('duel.yourTurnCount', { n: yourTurn }) : undefined}
         onPress={() => router.push('/duels')}
       />
+      <ModeCard icon="people" title={t('live.title')} body={t('live.home')} onPress={() => router.push('/live')} />
     </Screen>
   );
 }

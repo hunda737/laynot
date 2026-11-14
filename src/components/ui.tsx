@@ -114,7 +114,7 @@ export function Button({
     secondary: { bg: colors.surface, pressed: colors.surfaceAlt, fg: colors.text, border: colors.border },
     ghost: { bg: 'transparent', pressed: colors.surfaceAlt, fg: colors.text },
     inverse: { bg: colors.onPrimary, pressed: colors.primarySoft, fg: colors.primary },
-    sponsor: { bg: colors.sponsor, pressed: colors.sponsor, fg: '#FFFFFF' },
+    sponsor: { bg: colors.sponsorStrong, pressed: colors.sponsorStrong, fg: '#FFFFFF' },
   };
   const p = palette[kind];
   return (

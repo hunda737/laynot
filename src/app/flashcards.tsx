@@ -66,7 +66,7 @@ function FlashRound({ onNewDeck }: { onNewDeck: () => void }) {
           </Txt>
           <CoinsPill />
         </View>
-        <View style={[styles.hero, { backgroundColor: colors.sponsor }]}>
+        <View style={[styles.hero, { backgroundColor: colors.sponsorStrong }]}>
           <Icon name="albums" size={40} color="#FFFFFF" />
           <Txt variant="title" style={{ color: '#FFFFFF' }}>
             {t('flash.doneTitle')}
