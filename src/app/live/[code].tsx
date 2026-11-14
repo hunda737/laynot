@@ -29,7 +29,7 @@ import { haptic } from '@/services/haptics';
 import { goBack } from '@/services/nav';
 import { shareMessage } from '@/services/share';
 import { nowTs, todayKey, useGame, type AnswerLog } from '@/store/useGameStore';
-import { radius, space } from '@/theme/tokens';
+import { light, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 export default function LiveRoomScreen() {
@@ -179,7 +179,7 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
             {t('live.final')}
           </Txt>
         </View>
-        <View style={[styles.codeCard, { backgroundColor: me.rank === 1 ? colors.success : colors.sponsorStrong }]}>
+        <View style={[styles.codeCard, { backgroundColor: me.rank === 1 ? light.success : colors.sponsorStrong }]}>
           <Icon name="trophy" size={40} color="#FFFFFF" />
           <Txt variant="title" center style={{ color: '#FFFFFF' }}>
             {t('live.place', { rank: me.rank, total: standings.length })}
