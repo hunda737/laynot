@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -7,6 +8,7 @@ import { CATEGORIES } from '@/data/questions';
 import { STREET_EPISODES } from '@/data/street';
 import { useToday } from '@/hooks/useNow';
 import { formatDay, useT, type StringKey } from '@/i18n';
+import { outcome } from '@/lib/duel';
 import { effectiveStreak } from '@/lib/streak';
 import { useGame } from '@/store/useGameStore';
 import { radius, space } from '@/theme/tokens';
@@ -24,6 +26,18 @@ export default function Profile() {
   const streetResults = useGame((s) => s.streetResults);
   const missedCount = useGame((s) => s.missed.length);
   const flash = useGame((s) => s.flashStats);
+  const duels = useGame((s) => s.duels);
+  const record = useMemo(() => {
+    const r = { w: 0, l: 0, d: 0 };
+    for (const d of duels) {
+      if (!d.mine || !d.theirs || !d.claimed) continue;
+      const o = outcome(d.mine, d.theirs);
+      if (o === 'win') r.w++;
+      else if (o === 'loss') r.l++;
+      else r.d++;
+    }
+    return r;
+  }, [duels]);
 
   const days = Object.values(history).sort((a, b) => b.day.localeCompare(a.day));
   const playedTopics = CATEGORIES.filter((c) => topicStats[c.id]);
@@ -116,6 +130,12 @@ export default function Profile() {
         title={t('profile.street')}
         body={t('profile.episodes', { n: episodesPlayed, total: STREET_EPISODES.length })}
         onPress={() => router.push('/street')}
+      />
+      <LinkRow
+        icon="flash"
+        title={t('duel.title')}
+        body={t('duel.record', record)}
+        onPress={() => router.push('/duels')}
       />
       <LinkRow
         icon="albums"

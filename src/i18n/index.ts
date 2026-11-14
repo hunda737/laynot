@@ -46,6 +46,15 @@ export function formatSpan(lang: Language, ms: number): string {
   return lang === 'am' ? `${days} ቀን ${hours} ሰዓት` : `${days}d ${hours}h`;
 }
 
+/** A rough duration in whole minutes, e.g. "12 min" or "1 h 5 min", for estimates. */
+export function formatMinutes(lang: Language, ms: number): string {
+  const mins = Math.max(1, Math.ceil(ms / 60_000));
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  const [hu, mu] = lang === 'am' ? ['ሰዓት', 'ደቂቃ'] : ['h', 'min'];
+  return h > 0 ? `${h} ${hu}${m ? ` ${m} ${mu}` : ''}` : `${m} ${mu}`;
+}
+
 export function formatBirr(lang: Language, amount: number): string {
   return `${amount.toLocaleString('en-US')} ${lang === 'am' ? 'ብር' : 'Birr'}`;
 }

@@ -4,6 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { Brand } from '@/components/Brand';
 import { CoinsPill, LivesPill } from '@/components/status';
 import { Button, Card, Icon, IconButton, Pill, Screen, Txt, type IconName } from '@/components/ui';
+import { useDuels } from '@/hooks/useDuels';
 import { useNow } from '@/hooks/useNow';
 import { useT } from '@/i18n';
 import { dayKey, formatCountdown, msUntilNextDay } from '@/lib/clock';
@@ -26,6 +27,7 @@ export default function Home() {
   const streakNow = effectiveStreak(streak, today);
   const atRisk = streakAtRisk(streak, today) && !record;
   const inProgress = progress?.day === today ? progress.answers.length : 0;
+  const { yourTurn } = useDuels(30_000);
 
   return (
     <Screen>
@@ -96,11 +98,32 @@ export default function Home() {
       <Txt variant="heading">{t('home.modes')}</Txt>
       <ModeCard icon="mic" title={t('home.streetTitle')} body={t('home.streetBody')} onPress={() => router.push('/street')} />
       <ModeCard icon="grid" title={t('home.topicsTitle')} body={t('home.topicsBody')} onPress={() => router.push('/topics')} />
+
+      <Txt variant="heading">{t('home.friendsTitle')}</Txt>
+      <ModeCard
+        icon="flash"
+        title={t('duel.title')}
+        body={t('duel.home')}
+        badge={yourTurn > 0 ? t('duel.yourTurnCount', { n: yourTurn }) : undefined}
+        onPress={() => router.push('/duels')}
+      />
     </Screen>
   );
 }
 
-function ModeCard({ icon, title, body, onPress }: { icon: IconName; title: string; body: string; onPress: () => void }) {
+function ModeCard({
+  icon,
+  title,
+  body,
+  badge,
+  onPress,
+}: {
+  icon: IconName;
+  title: string;
+  body: string;
+  badge?: string;
+  onPress: () => void;
+}) {
   const { colors } = useTheme();
   return (
     <Card onPress={onPress} style={styles.mode}>
@@ -108,7 +131,16 @@ function ModeCard({ icon, title, body, onPress }: { icon: IconName; title: strin
         <Icon name={icon} size={22} color={colors.primary} />
       </View>
       <View style={{ flex: 1, gap: 2 }}>
-        <Txt variant="bodyStrong">{title}</Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, flexWrap: 'wrap' }}>
+          <Txt variant="bodyStrong">{title}</Txt>
+          {badge && (
+            <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+              <Txt variant="tiny" tone="onPrimary">
+                {badge}
+              </Txt>
+            </View>
+          )}
+        </View>
         <Txt variant="small" tone="muted">
           {body}
         </Txt>
@@ -124,5 +156,6 @@ const styles = StyleSheet.create({
   banner: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.md, borderRadius: radius.md },
   daily: { borderRadius: radius.lg, padding: space.xl, gap: space.sm },
   mode: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+  badge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: radius.pill },
   modeIcon: { width: 46, height: 46, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });

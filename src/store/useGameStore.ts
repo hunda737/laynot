@@ -8,6 +8,19 @@ import { DAY_MS, dayKey, type DayKey } from '@/lib/clock';
 import { DAILY_COUNT } from '@/lib/daily';
 import { correctCoins, type LevelChoice } from '@/lib/difficulty';
 import { FLASH_ROUND_COINS } from '@/lib/flash';
+import {
+  applyDuelCode,
+  botDuelAnswers,
+  FRIEND_BOTS,
+  newDuel,
+  normalizeAnswers,
+  type CodeResult,
+  type DecodedDuel,
+  type Duel,
+  type DuelAnswer,
+  type DuelCategory,
+  type Opponent,
+} from '@/lib/duel';
 import { newLeagueId, nextJoiner, type League } from '@/lib/league';
 import { AD_DAILY_CAP, mergeMissed, STARTING_COINS } from '@/lib/economy';
 import { FAST_REFILL_MS, gainLife, loseLife, MAX_LIVES, REFILL_MS, settleLives } from '@/lib/lives';
@@ -82,6 +95,10 @@ interface PersistedState {
   missed: string[];
   /** Last difficulty picked for Topic Play and Flash Cards. */
   topicLevel: LevelChoice;
+  /** Friend duels on this phone. Incoming demo challenges are added when first played. */
+  duels: Duel[];
+  /** Demo only: demo friends reply to duels within a minute. */
+  fastFriends: boolean;
   /** Day the sponsored free life was last claimed. */
   sponsoredRefillDay: DayKey;
   /** Private leagues on this phone, besides the built-in Friends league. */
@@ -115,6 +132,15 @@ interface Actions {
   resolveMissed: (questionId: string) => void;
   /** Record a Flash Cards round. Only a round played to the end pays the flat reward. */
   finishFlashRound: (seen: number, knownFirstTry: number, completed: boolean) => number;
+  startDuel: (opts: { category: DuelCategory; level: LevelChoice; opponent: Opponent }) => Duel;
+  /** Save your turn. Works for a stored duel or an incoming one not saved yet. */
+  finishDuelTurn: (duel: Duel, answers: DuelAnswer[]) => Duel;
+  /** Handle a pasted or linked duel code. */
+  enterDuelCode: (code: DecodedDuel) => { result: CodeResult; id: string };
+  /** Pay the coins for a finished duel once, and keep the opponent's answers. */
+  claimDuel: (id: string, theirs: DuelAnswer[], coins: number) => void;
+  demoIncomingDuel: () => string;
+  demoSetFastFriends: (on: boolean) => void;
   /** The once-a-day sponsored life. Returns false if today's is already used. */
   claimSponsoredRefill: () => boolean;
   createLeague: (name: string) => League;
@@ -153,6 +179,8 @@ const initialState = (): PersistedState => ({
   missed: [],
   topicLevel: 'mixed',
   leagues: [],
+  duels: [],
+  fastFriends: false,
   sponsoredRefillDay: '',
   flashStats: { rounds: 0, seen: 0, known: 0 },
   dayOffset: 0,
@@ -297,6 +325,43 @@ export const useGame = create<GameState>()(
         return earned;
       },
 
+      startDuel: ({ category, level, opponent }) => {
+        const duel = newDuel({ category, level, opponent, today: todayKey(), now: nowTs() });
+        set((s) => ({ duels: [duel, ...s.duels] }));
+        return duel;
+      },
+      finishDuelTurn: (duel, answers) => {
+        const done: Duel = { ...duel, mine: normalizeAnswers(answers), mineAt: nowTs() };
+        const wrong = answers.flatMap((a, i) => (a.mark === 'correct' ? [] : [duel.questions[i]]));
+        set((s) => ({
+          duels: s.duels.some((d) => d.id === duel.id) ? s.duels.map((d) => (d.id === duel.id ? done : d)) : [done, ...s.duels],
+          missed: mergeMissed(s.missed, wrong),
+        }));
+        return done;
+      },
+      enterDuelCode: (code) => {
+        const { duels, result, id } = applyDuelCode(get().duels, code, nowTs());
+        set({ duels });
+        return { result, id };
+      },
+      claimDuel: (id, theirs, coins) => {
+        const duel = get().duels.find((d) => d.id === id);
+        if (!duel || duel.claimed) return;
+        set((s) => ({
+          duels: s.duels.map((d) => (d.id === id ? { ...d, theirs, claimed: true } : d)),
+          coins: s.coins + coins,
+        }));
+      },
+      demoIncomingDuel: () => {
+        const taken = new Set(get().duels.filter((d) => d.role === 'challenged' && !d.mine).map((d) => (d.opponent.kind === 'bot' ? d.opponent.botId : '')));
+        const bot = FRIEND_BOTS.find((b) => !taken.has(b.id)) ?? FRIEND_BOTS[0];
+        const base = newDuel({ category: 'mixed', level: 'mixed', opponent: { kind: 'bot', botId: bot.id }, today: todayKey(), now: nowTs() });
+        const duel: Duel = { ...base, role: 'challenged', theirs: botDuelAnswers(base, bot) };
+        set((s) => ({ duels: [duel, ...s.duels] }));
+        return bot.name;
+      },
+      demoSetFastFriends: (fastFriends) => set({ fastFriends }),
+
       claimSponsoredRefill: () => {
         const today = todayKey();
         if (get().sponsoredRefillDay === today) return false;
@@ -330,8 +395,8 @@ export const useGame = create<GameState>()(
       demoEmptyLives: () => set({ lives: 0, livesAnchor: nowTs() }),
       demoResetAds: () => set({ ads: { day: '', count: 0 } }),
       demoLoadSample: () => {
-        const { language, themePref, dayOffset, fastRefill } = get();
-        set({ ...initialState(), language, themePref, dayOffset, fastRefill, ...samplePlayer(todayKey()) });
+        const { language, themePref, dayOffset, fastRefill, fastFriends } = get();
+        set({ ...initialState(), language, themePref, dayOffset, fastRefill, fastFriends, ...samplePlayer(todayKey(), nowTs()) });
       },
       demoSetFastRefill: (on) => {
         // Settle at the old speed, then restart the countdown at the new one.

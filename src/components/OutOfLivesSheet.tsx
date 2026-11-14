@@ -38,7 +38,7 @@ export function OutOfLivesSheet({
   const claimSponsoredRefill = useGame((s) => s.claimSponsoredRefill);
   const [refilling, setRefilling] = useState(false);
 
-  const go = (href: '/daily/play' | '/street' | '/review') => {
+  const go = (href: '/daily/play' | '/street' | '/review' | '/duels') => {
     onClose();
     router.push(href);
   };
@@ -112,6 +112,7 @@ export function OutOfLivesSheet({
               <Option icon="calendar" title={t('home.dailyTitle')} body={t('lives.noLivesNeeded')} onPress={() => go('/daily/play')} />
             )}
             <Option icon="mic" title={t('home.streetTitle')} body={t('lives.noLivesNeeded')} onPress={() => go('/street')} />
+            <Option icon="flash" title={t('lives.duel')} body={t('lives.noLivesNeeded')} onPress={() => go('/duels')} />
             {missedCount > 0 && (
               <Option
                 icon="refresh"

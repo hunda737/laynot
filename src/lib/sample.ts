@@ -1,8 +1,9 @@
 import { QUESTIONS, type CategoryId } from '@/data/questions';
 import { STREET_EPISODES } from '@/data/street';
-import { addDays, type DayKey } from './clock';
+import { addDays, DAY_MS, HOUR_MS, parseDayKey, type DayKey } from './clock';
 import { dailyQuestions } from './daily';
 import { correctCoins } from './difficulty';
+import { botById, botDuelAnswers, newDuel, normalizeAnswers, type Duel, type DuelAnswer } from './duel';
 import type { League } from './league';
 import { seeded } from './rng';
 import { dailyCoins, scoreAnswer, type AnswerMark } from './scoring';
@@ -28,7 +29,7 @@ export interface SampleRecord {
  * A believable returning player: Daily Challenge on each of the last `days` days
  * (not today, so the demo can still play it), some topic rounds, one street episode.
  */
-export function samplePlayer(today: DayKey, days = 6) {
+export function samplePlayer(today: DayKey, now: number = parseDayKey(today).getTime() + 12 * HOUR_MS, days = 6) {
   const rand = seeded(`sample:${today}`);
   const history: Record<DayKey, SampleRecord> = {};
   let coins = 120;
@@ -69,6 +70,21 @@ export function samplePlayer(today: DayKey, days = 6) {
 
   const ep = STREET_EPISODES[STREET_EPISODES.length - 1];
 
+  // Two finished duels with demo friends and one shared code still waiting for a reply.
+  const play = (): DuelAnswer[] =>
+    normalizeAnswers(
+      Array.from({ length: 5 }, () => {
+        const right = rand() < 0.7;
+        return { mark: right ? ('correct' as const) : ('wrong' as const), points: right ? 100 + Math.floor(rand() * 45) : 0, pick: right ? 0 : 1 };
+      }),
+    );
+  const duels: Duel[] = (['bot-1', 'bot-2'] as const).map((botId, i) => {
+    const base = newDuel({ category: i === 0 ? 'football' : 'mixed', level: 'mixed', opponent: { kind: 'bot', botId }, today: addDays(today, -2 + i), now: now - (2 - i) * DAY_MS, rand });
+    return { ...base, mine: play(), mineAt: base.createdAt + 60_000, theirs: botDuelAnswers(base, botById(botId)!), claimed: true };
+  });
+  const open = newDuel({ category: 'movies', level: 'mixed', opponent: { kind: 'open' }, today, now: now - 3 * HOUR_MS, rand });
+  duels.unshift({ ...open, mine: play(), mineAt: open.createdAt + 60_000 });
+
   return {
     profile: { name: 'Hana', phone: '911234567', adult: true, joinedDay: addDays(today, -days) },
     dailyHistory: history,
@@ -77,6 +93,7 @@ export function samplePlayer(today: DayKey, days = 6) {
     topicStats,
     streetResults: { [ep.id]: { correct: 3, total: ep.questions.length, day: addDays(today, -2) } },
     missed: missed.filter((id) => QUESTIONS.some((q) => q.id === id)),
+    duels,
     leagues: [{ id: 'h4n4', name: 'Office Crew', mine: true, joinedDay: addDays(today, -days), extra: [] }] as League[],
     onboarded: true,
     signupPromptDismissed: true,

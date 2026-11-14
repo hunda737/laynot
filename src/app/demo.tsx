@@ -33,6 +33,10 @@ export default function Demo() {
   const leagues = useGame((s) => s.leagues);
   const demoLeagueJoin = useGame((s) => s.demoLeagueJoin);
   const [friendNote, setFriendNote] = useState<string | null>(null);
+  const fastFriends = useGame((s) => s.fastFriends);
+  const demoSetFastFriends = useGame((s) => s.demoSetFastFriends);
+  const demoIncomingDuel = useGame((s) => s.demoIncomingDuel);
+  const [duelNote, setDuelNote] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<'reset' | 'sample' | null>(null);
 
   const done = () => haptic.success();
@@ -110,6 +114,35 @@ export default function Demo() {
           {adsLeft > 0 ? t('ad.left', { n: adsLeft }) : t('ad.capReached')}
         </Txt>
         <Button label={t('demo.resetAds')} kind="secondary" icon="refresh" onPress={demoResetAds} />
+      </Card>
+
+      <Card>
+        <Txt variant="bodyStrong">{t('duel.title')}</Txt>
+        <Txt variant="small" tone="muted">
+          {t('demo.fastFriends')}
+        </Txt>
+        <Segmented<'normal' | 'fast'>
+          value={fastFriends ? 'fast' : 'normal'}
+          onChange={(v) => demoSetFastFriends(v === 'fast')}
+          options={[
+            { value: 'normal', label: t('demo.fastFriendsNormal') },
+            { value: 'fast', label: t('demo.fastFriendsFast') },
+          ]}
+        />
+        <Button
+          label={t('demo.incomingDuel')}
+          kind="secondary"
+          icon="flash"
+          onPress={() => {
+            setDuelNote(t('demo.incomingSent', { name: demoIncomingDuel() }));
+            done();
+          }}
+        />
+        {duelNote && (
+          <Txt variant="small" tone="muted">
+            {duelNote}
+          </Txt>
+        )}
       </Card>
 
       <Card>
