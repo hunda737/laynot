@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 
+import { DAY_MS, formatCountdown, HOUR_MS } from '@/lib/clock';
 import { useGame } from '@/store/useGameStore';
 import { am } from './am';
 import { en, type StringKey } from './en';
@@ -36,6 +37,18 @@ const MONTHS: Record<Language, string[]> = {
   en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
   am: ['ጃንዩ', 'ፌብሩ', 'ማርች', 'ኤፕሪ', 'ሜይ', 'ጁን', 'ጁላይ', 'ኦገስ', 'ሴፕቴ', 'ኦክቶ', 'ኖቬም', 'ዲሴም'],
 };
+
+/** "2d 4h" / "2 ቀን 4 ሰዓት" for spans over a day, otherwise a h:mm:ss countdown. */
+export function formatSpan(lang: Language, ms: number): string {
+  const days = Math.floor(ms / DAY_MS);
+  if (days < 1) return formatCountdown(ms);
+  const hours = Math.floor((ms % DAY_MS) / HOUR_MS);
+  return lang === 'am' ? `${days} ቀን ${hours} ሰዓት` : `${days}d ${hours}h`;
+}
+
+export function formatBirr(lang: Language, amount: number): string {
+  return `${amount.toLocaleString('en-US')} ${lang === 'am' ? 'ብር' : 'Birr'}`;
+}
 
 /** "14 Nov 2026" from a YYYY-MM-DD key. Gregorian in both languages for now. */
 export function formatDay(lang: Language, key: string): string {

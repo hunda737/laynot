@@ -2,6 +2,7 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Share, StyleSheet, View } from 'react-native';
 
 import { Button, Card, Icon, IconButton, Pill, Screen, Txt } from '@/components/ui';
+import { useBoard } from '@/hooks/useBoard';
 import { useNow } from '@/hooks/useNow';
 import { formatDay, useT } from '@/i18n';
 import { questionById } from '@/data';
@@ -24,6 +25,8 @@ export default function DailyResult() {
   const profile = useGame((s) => s.profile);
   const promptDismissed = useGame((s) => s.signupPromptDismissed);
   const dismissPrompt = useGame((s) => s.dismissSignupPrompt);
+  const { board } = useBoard('global', 'today');
+  const me = board.find((e) => e.isYou);
 
   if (!record) return <Redirect href="/home" />;
 
@@ -75,6 +78,16 @@ export default function DailyResult() {
       </View>
 
       <Button label={t('result.share')} icon="share-social" onPress={share} />
+
+      {isToday && me && board.length >= 3 && (
+        <Card style={styles.rankRow} onPress={() => router.navigate('/ranks')}>
+          <Icon name="podium" color={colors.gold} />
+          <Txt variant="bodyStrong" style={{ flex: 1 }}>
+            {t('result.rank', { rank: me.rank, total: board.length })}
+          </Txt>
+          <Icon name="chevron-forward" color={colors.textMuted} />
+        </Card>
+      )}
 
       {isToday && (
         <Txt variant="small" tone="muted" center>
@@ -160,4 +173,5 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', maxWidth: 5 * 34 },
   cell: { width: 28, height: 28, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
   pills: { flexDirection: 'row', gap: space.sm, flexWrap: 'wrap', justifyContent: 'center' },
+  rankRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
 });

@@ -100,22 +100,10 @@ export default function Home() {
   );
 }
 
-function ModeCard({
-  icon,
-  title,
-  body,
-  soon,
-  onPress,
-}: {
-  icon: IconName;
-  title: string;
-  body: string;
-  soon?: string;
-  onPress?: () => void;
-}) {
+function ModeCard({ icon, title, body, onPress }: { icon: IconName; title: string; body: string; onPress: () => void }) {
   const { colors } = useTheme();
   return (
-    <Card onPress={onPress} style={[styles.mode, !onPress && { opacity: 0.7 }]}>
+    <Card onPress={onPress} style={styles.mode}>
       <View style={[styles.modeIcon, { backgroundColor: colors.primarySoft }]}>
         <Icon name={icon} size={22} color={colors.primary} />
       </View>
@@ -124,13 +112,8 @@ function ModeCard({
         <Txt variant="small" tone="muted">
           {body}
         </Txt>
-        {!onPress && soon && (
-          <Txt variant="tiny" tone="primary" style={{ marginTop: 4 }}>
-            {soon.toUpperCase()}
-          </Txt>
-        )}
       </View>
-      {onPress && <Icon name="chevron-forward" color={colors.textMuted} />}
+      <Icon name="chevron-forward" color={colors.textMuted} />
     </Card>
   );
 }

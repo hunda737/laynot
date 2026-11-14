@@ -56,6 +56,12 @@ export function formatCountdown(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+/** Milliseconds until the current Monday-to-Sunday week ends. */
+export function msUntilWeekEnd(ts: number): number {
+  const end = parseDayKey(addDays(weekStart(dayKey(ts)), 7)).getTime();
+  return end - ts;
+}
+
 /** The first Daily Challenge. Used to number the share card ("Laynot #14"). */
 export const LAUNCH_DAY: DayKey = '2026-11-01';
 

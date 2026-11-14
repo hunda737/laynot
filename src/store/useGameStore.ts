@@ -8,6 +8,7 @@ import { DAY_MS, dayKey, type DayKey } from '@/lib/clock';
 import { DAILY_COUNT } from '@/lib/daily';
 import { AD_DAILY_CAP, mergeMissed, STARTING_COINS, TOPIC_COINS_PER_CORRECT } from '@/lib/economy';
 import { FAST_REFILL_MS, gainLife, loseLife, MAX_LIVES, REFILL_MS, settleLives } from '@/lib/lives';
+import { samplePlayer } from '@/lib/sample';
 import { countCorrect, dailyCoins, type AnswerMark } from '@/lib/scoring';
 import { applyDailyPlay, EMPTY_STREAK, type Streak } from '@/lib/streak';
 
@@ -96,6 +97,8 @@ interface Actions {
   resolveMissed: (questionId: string) => void;
   demoEmptyLives: () => void;
   demoResetAds: () => void;
+  /** Replace progress with a returning player who has a 6-day streak. Keeps language and theme. */
+  demoLoadSample: () => void;
   demoSetFastRefill: (on: boolean) => void;
   demoShiftDays: (days: number) => void;
   demoResetClock: () => void;
@@ -250,6 +253,10 @@ export const useGame = create<GameState>()(
 
       demoEmptyLives: () => set({ lives: 0, livesAnchor: nowTs() }),
       demoResetAds: () => set({ ads: { day: '', count: 0 } }),
+      demoLoadSample: () => {
+        const { language, themePref, dayOffset, fastRefill } = get();
+        set({ ...initialState(), language, themePref, dayOffset, fastRefill, ...samplePlayer(todayKey()) });
+      },
       demoSetFastRefill: (on) => {
         // Settle at the old speed, then restart the countdown at the new one.
         const s = get();
