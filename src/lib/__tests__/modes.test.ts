@@ -1,6 +1,6 @@
 import { FLASH_CARDS } from '@/data/flashcards';
 import { DIFFICULTIES, QUESTIONS } from '@/data/questions';
-import { SPONSORED_QUESTIONS } from '@/data/sponsors';
+import { refillSponsor, SPONSORED_QUESTIONS, sponsoredCategory } from '@/data/sponsors';
 import { STREET_EPISODES, streetAverage } from '@/data/street';
 import { dailyIds, dailyQuestions } from '../daily';
 import { coinsFor, correctCoins, pickByDifficulty, rampedPick } from '../difficulty';
@@ -131,5 +131,21 @@ describe('flash cards', () => {
     expect(runFinished(run)).toBe(true);
     expect(knownFirstTry(run)).toBe(2);
     expect(missedCards(run)).toEqual([a]);
+  });
+});
+
+describe('sponsor formats', () => {
+  it('keeps one presenting sponsor for a whole month and rotates monthly', () => {
+    expect(sponsoredCategory('2026-11-01')).toEqual(sponsoredCategory('2026-11-30'));
+    const months = ['2026-11-15', '2026-12-15', '2027-01-15'].map((d) => sponsoredCategory(d).category);
+    expect(new Set(months).size).toBe(3);
+  });
+
+  it('has a sponsored question for every presenting sponsor', () => {
+    for (const d of ['2026-11-15', '2026-12-15', '2027-01-15']) {
+      const { sponsor } = sponsoredCategory(d);
+      expect(SPONSORED_QUESTIONS.some((q) => q.sponsorId === sponsor.id)).toBe(true);
+    }
+    expect(refillSponsor().name).toBeTruthy();
   });
 });

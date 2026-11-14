@@ -1,5 +1,5 @@
 import type { Localized } from '@/i18n';
-import type { Question } from './questions';
+import type { CategoryId, Question } from './questions';
 
 // Invented brands for the demo. None of them refers to a real company.
 export interface Sponsor {
@@ -84,3 +84,22 @@ export const SPONSORED_QUESTIONS: SponsoredQuestion[] = [
     fact: { en: 'Light covers the 150 million km in about 8 minutes 20 seconds.', am: 'ብርሃን 150 ሚሊዮን ኪሎ ሜትሩን በ8 ደቂቃ ከ20 ሰከንድ ገደማ ያቋርጣል።' },
   },
 ];
+
+/** The three "presented by" pairs. One is live each month. */
+const CATEGORY_SPONSORS: { category: CategoryId; sponsorId: string }[] = [
+  { category: 'football', sponsorId: 'merkato-mart' },
+  { category: 'science', sponsorId: 'tsehay' },
+  { category: 'movies', sponsorId: 'koket' },
+];
+
+/** This month's sponsored category: "Football, presented by Merkato Mart". */
+export function sponsoredCategory(day: string): { category: CategoryId; sponsor: Sponsor } {
+  const [y, m] = day.split('-').map(Number);
+  const pair = CATEGORY_SPONSORS[(y * 12 + (m - 1)) % CATEGORY_SPONSORS.length];
+  return { category: pair.category, sponsor: SPONSOR_BY_ID[pair.sponsorId] };
+}
+
+/** The brand behind the once-a-day free life ("This refill is brought to you by..."). */
+export function refillSponsor(): Sponsor {
+  return SPONSOR_BY_ID.tsehay;
+}

@@ -232,6 +232,12 @@ export const am: Record<StringKey, string> = {
   'topics.skipped': 'ታልፏል',
 
   'sponsor.by': 'ስፖንሰር · {name}',
+  'sponsor.presents': 'በ{name} የቀረበ',
+  'sponsor.thanks': 'በዚህ ወር {category} በ{name} ቀርቦላችኋል።',
+  'sponsor.refill': 'ነፃ ሕይወት ከ{name}',
+  'sponsor.refillSub': 'በቀን አንድ ጊዜ · ቪዲዮ የለም · ማስታወቂያ አይቆጥርም',
+  'sponsor.refillBy': 'ይህ የሕይወት መሙያ የቀረበው በ',
+  'sponsor.refillUsed': 'የዛሬው ነፃ ሕይወት ከ{name} ተወስዷል። ነገ ይመለሳል።',
 
   'street.title': 'መንገዱን አሸንፍ',
   'street.body': 'ከቪዲዮዎቹ የተወሰዱ ጥያቄዎች። መጀመሪያ መልስ፣ ከዚያ በመንገድ ላይ ያሉ ሰዎች እንዴት እንደመለሱ እይ። ሕይወት አያስፈልግም።',

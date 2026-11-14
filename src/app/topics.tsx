@@ -6,7 +6,10 @@ import { DifficultyPicker } from '@/components/difficulty';
 import { OutOfLivesSheet } from '@/components/OutOfLivesSheet';
 import { CoinsPill, LivesPill } from '@/components/status';
 import { Card, Header, Icon, Screen, Txt, type IconName } from '@/components/ui';
+import { SponsorStrip } from '@/components/SponsorStrip';
 import { CATEGORIES, type CategoryId } from '@/data/questions';
+import { sponsoredCategory } from '@/data/sponsors';
+import { useToday } from '@/hooks/useNow';
 import { useLives } from '@/hooks/useEconomy';
 import { useT, type StringKey } from '@/i18n';
 import { goBack } from '@/services/nav';
@@ -24,10 +27,14 @@ export default function Topics() {
   const setLevel = useGame((s) => s.setTopicLevel);
   const missedCount = useGame((s) => s.missed.length);
   const [outOfLives, setOutOfLives] = useState(false);
+  /** The category tapped while out of lives, opened once a life comes back. */
+  const [pending, setPending] = useState<CategoryId | null>(null);
+  const presented = sponsoredCategory(useToday());
 
   const open = (id: CategoryId) => {
-    if (lives <= 0) setOutOfLives(true);
-    else router.push({ pathname: '/topics/[category]', params: { category: id } });
+    if (lives > 0) return router.push({ pathname: '/topics/[category]', params: { category: id } });
+    setPending(id);
+    setOutOfLives(true);
   };
 
   return (
@@ -54,8 +61,9 @@ export default function Topics() {
       <View style={styles.grid}>
         {CATEGORIES.map((c) => {
           const s = stats[c.id];
+          const sponsored = presented.category === c.id;
           return (
-            <Card key={c.id} onPress={() => open(c.id)} style={styles.tile}>
+            <Card key={c.id} onPress={() => open(c.id)} style={[styles.tile, sponsored && { borderColor: presented.sponsor.color }]}>
               <View style={[styles.icon, { backgroundColor: colors.primarySoft }]}>
                 <Icon name={c.icon as IconName} size={24} color={colors.primary} />
               </View>
@@ -63,6 +71,7 @@ export default function Topics() {
               <Txt variant="small" tone={s ? 'success' : 'muted'}>
                 {s ? t('topics.best', { n: s.best }) : t('topics.new')}
               </Txt>
+              {sponsored && <SponsorStrip sponsor={presented.sponsor} compact />}
             </Card>
           );
         })}
@@ -94,8 +103,15 @@ export default function Topics() {
 
       <OutOfLivesSheet
         visible={outOfLives}
-        onClose={() => setOutOfLives(false)}
-        onLifeGained={() => setOutOfLives(false)}
+        onClose={() => {
+          setOutOfLives(false);
+          setPending(null);
+        }}
+        onLifeGained={() => {
+          setOutOfLives(false);
+          setPending(null);
+          if (pending) router.push({ pathname: '/topics/[category]', params: { category: pending } });
+        }}
       />
     </Screen>
   );

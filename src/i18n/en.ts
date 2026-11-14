@@ -229,6 +229,12 @@ export const en = {
   'topics.skipped': 'Skipped',
 
   'sponsor.by': 'Sponsored · {name}',
+  'sponsor.presents': 'Presented by {name}',
+  'sponsor.thanks': '{category} this month is brought to you by {name}.',
+  'sponsor.refill': 'Free life from {name}',
+  'sponsor.refillSub': "Once a day · no video · doesn't use an ad",
+  'sponsor.refillBy': 'This life refill is brought to you by',
+  'sponsor.refillUsed': "Today's free life from {name} is used. Back tomorrow.",
 
   'street.title': 'Beat the Street',
   'street.body': 'Questions from the videos. Answer first, then see how the people on the street did. No lives needed.',

@@ -82,6 +82,8 @@ interface PersistedState {
   missed: string[];
   /** Last difficulty picked for Topic Play and Flash Cards. */
   topicLevel: LevelChoice;
+  /** Day the sponsored free life was last claimed. */
+  sponsoredRefillDay: DayKey;
   /** Private leagues on this phone, besides the built-in Friends league. */
   leagues: League[];
   /** Flash Cards: rounds finished, cards seen and cards marked "Got it" on the first try. */
@@ -113,6 +115,8 @@ interface Actions {
   resolveMissed: (questionId: string) => void;
   /** Record a Flash Cards round. Only a round played to the end pays the flat reward. */
   finishFlashRound: (seen: number, knownFirstTry: number, completed: boolean) => number;
+  /** The once-a-day sponsored life. Returns false if today's is already used. */
+  claimSponsoredRefill: () => boolean;
   createLeague: (name: string) => League;
   /** Join from an invite. Returns the league, and whether it was already on this phone. */
   joinLeague: (invite: { id: string; name: string }) => { league: League; already: boolean };
@@ -149,6 +153,7 @@ const initialState = (): PersistedState => ({
   missed: [],
   topicLevel: 'mixed',
   leagues: [],
+  sponsoredRefillDay: '',
   flashStats: { rounds: 0, seen: 0, known: 0 },
   dayOffset: 0,
   fastRefill: false,
@@ -290,6 +295,14 @@ export const useGame = create<GameState>()(
           coins: s.coins + earned,
         }));
         return earned;
+      },
+
+      claimSponsoredRefill: () => {
+        const today = todayKey();
+        if (get().sponsoredRefillDay === today) return false;
+        get().gainLife();
+        set({ sponsoredRefillDay: today });
+        return true;
       },
 
       createLeague: (name) => {

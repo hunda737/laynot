@@ -8,7 +8,8 @@ import { useRewardedAd } from '@/components/RewardedAd';
 import { CoinsPill, LivesPill } from '@/components/status';
 import { Button, Icon, IconButton, Screen, Txt } from '@/components/ui';
 import { CATEGORIES, type CategoryId } from '@/data/questions';
-import { SPONSOR_BY_ID } from '@/data/sponsors';
+import { SponsorStrip } from '@/components/SponsorStrip';
+import { SPONSOR_BY_ID, sponsoredCategory } from '@/data/sponsors';
 import { useAdsLeft } from '@/hooks/useEconomy';
 import { useQuestionTimer } from '@/hooks/useQuestionTimer';
 import { useT, type StringKey } from '@/i18n';
@@ -19,7 +20,7 @@ import { QUESTION_TIME_MS, type AnswerMark } from '@/lib/scoring';
 import { topicRound } from '@/lib/topics';
 import { haptic } from '@/services/haptics';
 import { goBack } from '@/services/nav';
-import { nowTs, refillMsOf, useGame, type AnswerLog } from '@/store/useGameStore';
+import { nowTs, refillMsOf, todayKey, useGame, type AnswerLog } from '@/store/useGameStore';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
@@ -38,7 +39,14 @@ export default function TopicScreen() {
 function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () => void }) {
   const { colors } = useTheme();
   const { t, L } = useT();
-  const [round] = useState(() => topicRound(category, { level: useGame.getState().topicLevel }));
+  // The sponsor is fixed when the round starts, so a round never changes sponsor midway.
+  const [presenter] = useState(() => {
+    const p = sponsoredCategory(todayKey());
+    return p.category === category ? p.sponsor : undefined;
+  });
+  const [round] = useState(() =>
+    topicRound(category, { level: useGame.getState().topicLevel, sponsorId: presenter?.id }),
+  );
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerLog[]>([]);
   const [marks, setMarks] = useState<AnswerMark[]>([]);
@@ -150,6 +158,12 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
             </Txt>
           </View>
         </View>
+        {presenter && (
+          <SponsorStrip
+            sponsor={presenter}
+            message={t('sponsor.thanks', { category: t(`cat.${category}` as StringKey), name: presenter.name })}
+          />
+        )}
         {done.endedEarly && (
           <Txt tone="muted" center>
             {t('topics.endedNoLives')}
@@ -196,6 +210,8 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
         <ProgressDots marks={marks} total={round.length} current={index} />
         <LivesPill />
       </View>
+
+      {presenter && <SponsorStrip sponsor={presenter} compact />}
 
       <View style={{ gap: space.sm }}>
         <View style={styles.subRow}>
