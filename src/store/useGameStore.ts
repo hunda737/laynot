@@ -6,7 +6,9 @@ import type { CategoryId } from '@/data/questions';
 import type { Language } from '@/i18n';
 import { DAY_MS, dayKey, type DayKey } from '@/lib/clock';
 import { DAILY_COUNT } from '@/lib/daily';
-import { AD_DAILY_CAP, mergeMissed, STARTING_COINS, TOPIC_COINS_PER_CORRECT } from '@/lib/economy';
+import { correctCoins, type LevelChoice } from '@/lib/difficulty';
+import { FLASH_ROUND_COINS } from '@/lib/flash';
+import { AD_DAILY_CAP, mergeMissed, STARTING_COINS } from '@/lib/economy';
 import { FAST_REFILL_MS, gainLife, loseLife, MAX_LIVES, REFILL_MS, settleLives } from '@/lib/lives';
 import { samplePlayer } from '@/lib/sample';
 import { countCorrect, dailyCoins, type AnswerMark } from '@/lib/scoring';
@@ -53,6 +55,12 @@ export interface TopicStat {
   best: number;
 }
 
+export interface FlashStats {
+  rounds: number;
+  seen: number;
+  known: number;
+}
+
 interface PersistedState {
   language: Language;
   themePref: ThemePref;
@@ -71,6 +79,10 @@ interface PersistedState {
   streetResults: Record<string, { correct: number; total: number; day: DayKey }>;
   /** Ids of questions answered wrong, newest first. */
   missed: string[];
+  /** Last difficulty picked for Topic Play and Flash Cards. */
+  topicLevel: LevelChoice;
+  /** Flash Cards: rounds finished, cards seen and cards marked "Got it" on the first try. */
+  flashStats: FlashStats;
   /** Demo only: whole days added to the real clock. */
   dayOffset: number;
   /** Demo only: refill a life every minute instead of every 30. */
@@ -80,6 +92,7 @@ interface PersistedState {
 interface Actions {
   setLanguage: (language: Language) => void;
   setThemePref: (pref: ThemePref) => void;
+  setTopicLevel: (level: LevelChoice) => void;
   markOnboarded: () => void;
   recordDailyAnswer: (day: DayKey, answer: AnswerLog) => void;
   finishDaily: (day: DayKey, fillMissingWith?: string[]) => DailyRecord | null;
@@ -95,6 +108,8 @@ interface Actions {
   /** Returns the coins earned (zero on a replay). */
   finishStreet: (episodeId: string, answers: AnswerLog[]) => number;
   resolveMissed: (questionId: string) => void;
+  /** Record a Flash Cards round. Only a round played to the end pays the flat reward. */
+  finishFlashRound: (seen: number, knownFirstTry: number, completed: boolean) => number;
   demoEmptyLives: () => void;
   demoResetAds: () => void;
   /** Replace progress with a returning player who has a 6-day streak. Keeps language and theme. */
@@ -123,6 +138,8 @@ const initialState = (): PersistedState => ({
   topicStats: {},
   streetResults: {},
   missed: [],
+  topicLevel: 'mixed',
+  flashStats: { rounds: 0, seen: 0, known: 0 },
   dayOffset: 0,
   fastRefill: false,
 });
@@ -138,6 +155,7 @@ export const useGame = create<GameState>()(
 
       setLanguage: (language) => set({ language }),
       setThemePref: (themePref) => set({ themePref }),
+      setTopicLevel: (topicLevel) => set({ topicLevel }),
       markOnboarded: () => set({ onboarded: true }),
 
       recordDailyAnswer: (day, answer) => {
@@ -167,7 +185,7 @@ export const useGame = create<GameState>()(
         }
         const nextStreak = applyDailyPlay(streak, day);
         const correct = countCorrect(answers.map((a) => a.mark));
-        const earned = dailyCoins(correct, nextStreak.current);
+        const earned = dailyCoins(correctCoins(answers), nextStreak.current);
         const record: DailyRecord = {
           day,
           score: answers.reduce((sum, a) => sum + a.points, 0),
@@ -238,7 +256,7 @@ export const useGame = create<GameState>()(
         const { streetResults, missed, coins } = get();
         const correct = answers.filter((a) => a.mark === 'correct').length;
         const firstTime = !streetResults[episodeId];
-        const earned = firstTime ? correct * TOPIC_COINS_PER_CORRECT : 0;
+        const earned = firstTime ? correctCoins(answers) : 0;
         set({
           streetResults: firstTime
             ? { ...streetResults, [episodeId]: { correct, total: answers.length, day: todayKey() } }
@@ -250,6 +268,19 @@ export const useGame = create<GameState>()(
       },
 
       resolveMissed: (questionId) => set((s) => ({ missed: s.missed.filter((id) => id !== questionId) })),
+
+      finishFlashRound: (seen, knownFirstTry, completed) => {
+        const earned = completed ? FLASH_ROUND_COINS : 0;
+        set((s) => ({
+          flashStats: {
+            rounds: s.flashStats.rounds + 1,
+            seen: s.flashStats.seen + seen,
+            known: s.flashStats.known + knownFirstTry,
+          },
+          coins: s.coins + earned,
+        }));
+        return earned;
+      },
 
       demoEmptyLives: () => set({ lives: 0, livesAnchor: nowTs() }),
       demoResetAds: () => set({ ads: { day: '', count: 0 } }),
@@ -279,8 +310,15 @@ export const useGame = create<GameState>()(
     }),
     {
       name: 'laynot-game',
-      version: 1,
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
+      // New keys get their defaults from the shallow merge. Version 2 changed the
+      // question pool, so a half-played daily from before would no longer match.
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Partial<PersistedState>;
+        if (version < 2) return { ...state, dailyProgress: null };
+        return state;
+      },
     },
   ),
 );

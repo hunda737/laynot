@@ -7,6 +7,7 @@ import type { AnswerMark } from '@/lib/scoring';
 import type { AnswerLog } from '@/store/useGameStore';
 import { radius, space, type as typeScale } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
+import { DifficultyBadge } from './difficulty';
 import { Button, Icon, Txt } from './ui';
 
 export function TimerBar({ remaining, limit, stopped }: { remaining: number; limit: number; stopped?: boolean }) {
@@ -88,9 +89,12 @@ export function QuestionView({
       }}
     >
       <View style={{ gap: space.sm }}>
-        <Txt variant="tiny" tone="primary">
-          {(label ?? t(`cat.${pq.question.category}` as StringKey)).toUpperCase()}
-        </Txt>
+        <View style={styles.labelRow}>
+          <Txt variant="tiny" tone="primary" style={{ flexShrink: 1 }}>
+            {(label ?? t(`cat.${pq.question.category}` as StringKey)).toUpperCase()}
+          </Txt>
+          <DifficultyBadge level={pq.question.difficulty} />
+        </View>
         <Txt variant="question">{L(pq.question.text)}</Txt>
       </View>
       <View style={{ gap: space.sm }}>
@@ -219,4 +223,5 @@ const styles = StyleSheet.create({
   badge: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   reveal: { borderRadius: radius.lg, borderWidth: 1.5, padding: space.lg, gap: space.md },
   revealTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  labelRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: space.sm },
 });

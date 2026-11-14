@@ -28,7 +28,10 @@ export function shareGrid(marks: readonly AnswerMark[]): string {
   return rows.join('\n');
 }
 
-/** Coins for a finished Daily Challenge: 10 per correct answer plus 5 per streak day, capped at 50. */
-export function dailyCoins(correct: number, streak: number): number {
-  return correct * 10 + Math.min(streak * 5, 50);
+/**
+ * Coins for a finished Daily Challenge: the coins for each correct answer
+ * (8, 10 or 15 by level, see `correctCoins`) plus 5 per streak day, capped at 50.
+ */
+export function dailyCoins(answerCoins: number, streak: number): number {
+  return answerCoins + Math.min(streak * 5, 50);
 }

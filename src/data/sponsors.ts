@@ -45,6 +45,7 @@ export const SPONSORED_QUESTIONS: SponsoredQuestion[] = [
     id: 'sp-koket-01',
     sponsorId: 'koket',
     category: 'general',
+    difficulty: 'easy',
     text: { en: 'Which grain is used most to bake everyday dabo bread?', am: 'የዕለት ተዕለት ዳቦ ለመጋገር በብዛት የሚውለው እህል የትኛው ነው?' },
     choices: [
       { en: 'Wheat', am: 'ስንዴ' },
@@ -58,6 +59,7 @@ export const SPONSORED_QUESTIONS: SponsoredQuestion[] = [
     id: 'sp-merkato-01',
     sponsorId: 'merkato-mart',
     category: 'general',
+    difficulty: 'easy',
     text: { en: "Addis Ababa's Merkato is known as one of Africa's largest what?", am: 'የአዲስ አበባው መርካቶ ከአፍሪካ ትልልቅ ምን ተብሎ ይታወቃል?' },
     choices: [
       { en: 'Open-air markets', am: 'ክፍት ገበያዎች' },
@@ -71,6 +73,7 @@ export const SPONSORED_QUESTIONS: SponsoredQuestion[] = [
     id: 'sp-tsehay-01',
     sponsorId: 'tsehay',
     category: 'general',
+    difficulty: 'easy',
     text: { en: 'About how long does sunlight take to reach the Earth?', am: 'የፀሐይ ብርሃን ምድር ለመድረስ በግምት ምን ያህል ጊዜ ይወስድበታል?' },
     choices: [
       { en: '8 minutes', am: '8 ደቂቃ' },

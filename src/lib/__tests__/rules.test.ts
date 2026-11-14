@@ -38,8 +38,8 @@ describe('scoring', () => {
   });
 
   it('caps the streak coin bonus', () => {
-    expect(dailyCoins(7, 2)).toBe(80);
-    expect(dailyCoins(10, 30)).toBe(150);
+    expect(dailyCoins(70, 2)).toBe(80);
+    expect(dailyCoins(100, 30)).toBe(150);
   });
 });
 

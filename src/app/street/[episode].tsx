@@ -8,7 +8,7 @@ import { Button, Icon, IconButton, Screen, Txt } from '@/components/ui';
 import { EPISODE_BY_ID, streetAverage, type StreetEpisode } from '@/data/street';
 import { useQuestionTimer } from '@/hooks/useQuestionTimer';
 import { useT } from '@/i18n';
-import { TOPIC_COINS_PER_CORRECT } from '@/lib/economy';
+import { coinsFor } from '@/lib/difficulty';
 import { shuffle } from '@/lib/rng';
 import { QUESTION_TIME_MS } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
@@ -143,7 +143,7 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
           revealed={revealed}
           badge={
             revealed.mark === 'correct' && !alreadyPlayed
-              ? t('topics.coinsEarned', { n: TOPIC_COINS_PER_CORRECT })
+              ? t('topics.coinsEarned', { n: coinsFor(pq.question.difficulty) })
               : undefined
           }
           nextLabel={isLast ? t('quiz.finish') : t('quiz.next')}

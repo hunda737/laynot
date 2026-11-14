@@ -5,7 +5,6 @@ export const HINT_COST = { fifty: 30, skip: 50 } as const;
 export type HintKind = keyof typeof HINT_COST;
 
 export const TOPIC_ROUND_SIZE = 5;
-export const TOPIC_COINS_PER_CORRECT = 10;
 
 /** Most recent missed questions kept for review. */
 export const MISSED_CAP = 30;

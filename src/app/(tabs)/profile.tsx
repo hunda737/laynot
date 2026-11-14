@@ -23,6 +23,7 @@ export default function Profile() {
   const topicStats = useGame((s) => s.topicStats);
   const streetResults = useGame((s) => s.streetResults);
   const missedCount = useGame((s) => s.missed.length);
+  const flash = useGame((s) => s.flashStats);
 
   const days = Object.values(history).sort((a, b) => b.day.localeCompare(a.day));
   const playedTopics = CATEGORIES.filter((c) => topicStats[c.id]);
@@ -115,6 +116,16 @@ export default function Profile() {
         title={t('profile.street')}
         body={t('profile.episodes', { n: episodesPlayed, total: STREET_EPISODES.length })}
         onPress={() => router.push('/street')}
+      />
+      <LinkRow
+        icon="albums"
+        title={t('flash.title')}
+        body={
+          flash.rounds > 0
+            ? t('flash.stats', { n: Math.round((100 * flash.known) / Math.max(flash.seen, 1)), rounds: flash.rounds })
+            : t('flash.tile')
+        }
+        onPress={() => router.push('/flashcards')}
       />
       {missedCount > 0 && (
         <LinkRow

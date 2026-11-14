@@ -2,6 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { DifficultyPicker } from '@/components/difficulty';
 import { OutOfLivesSheet } from '@/components/OutOfLivesSheet';
 import { CoinsPill, LivesPill } from '@/components/status';
 import { Card, Header, Icon, Screen, Txt, type IconName } from '@/components/ui';
@@ -18,6 +19,9 @@ export default function Topics() {
   const { t } = useT();
   const { lives } = useLives();
   const stats = useGame((s) => s.topicStats);
+  const flash = useGame((s) => s.flashStats);
+  const level = useGame((s) => s.topicLevel);
+  const setLevel = useGame((s) => s.setTopicLevel);
   const missedCount = useGame((s) => s.missed.length);
   const [outOfLives, setOutOfLives] = useState(false);
 
@@ -40,6 +44,13 @@ export default function Topics() {
       />
       <Txt tone="muted">{t('topics.body')}</Txt>
 
+      <View style={{ gap: 6 }}>
+        <DifficultyPicker value={level} onChange={setLevel} />
+        <Txt variant="small" tone="muted">
+          {t('level.coins')}
+        </Txt>
+      </View>
+
       <View style={styles.grid}>
         {CATEGORIES.map((c) => {
           const s = stats[c.id];
@@ -55,6 +66,17 @@ export default function Topics() {
             </Card>
           );
         })}
+        <Card onPress={() => router.push('/flashcards')} style={[styles.tile, { borderColor: colors.sponsor }]}>
+          <View style={[styles.icon, { backgroundColor: colors.sponsorSoft }]}>
+            <Icon name="albums" size={24} color={colors.sponsor} />
+          </View>
+          <Txt variant="bodyStrong">{t('flash.title')}</Txt>
+          <Txt variant="small" tone={flash.rounds > 0 ? 'success' : 'muted'}>
+            {flash.rounds > 0
+              ? t('flash.stats', { n: Math.round((100 * flash.known) / Math.max(flash.seen, 1)), rounds: flash.rounds })
+              : `${t('flash.tile')} · ${t('lives.noLivesNeeded')}`}
+          </Txt>
+        </Card>
       </View>
 
       {missedCount > 0 && (

@@ -2,6 +2,7 @@ import { QUESTIONS, type CategoryId } from '@/data/questions';
 import { STREET_EPISODES } from '@/data/street';
 import { addDays, type DayKey } from './clock';
 import { dailyQuestions } from './daily';
+import { correctCoins } from './difficulty';
 import { seeded } from './rng';
 import { dailyCoins, scoreAnswer, type AnswerMark } from './scoring';
 
@@ -41,7 +42,7 @@ export function samplePlayer(today: DayKey, days = 6) {
       return { questionId: question.id, pick, mark, points: scoreAnswer(mark === 'correct', 2500 + rand() * 9000) };
     });
     const correct = answers.filter((a) => a.mark === 'correct').length;
-    const earned = dailyCoins(correct, streakAfter);
+    const earned = dailyCoins(correctCoins(answers), streakAfter);
     coins += earned;
     history[day] = {
       day,

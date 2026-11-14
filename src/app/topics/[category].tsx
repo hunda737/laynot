@@ -12,7 +12,8 @@ import { SPONSOR_BY_ID } from '@/data/sponsors';
 import { useAdsLeft } from '@/hooks/useEconomy';
 import { useQuestionTimer } from '@/hooks/useQuestionTimer';
 import { useT, type StringKey } from '@/i18n';
-import { fiftyFifty, HINT_COST, TOPIC_COINS_PER_CORRECT } from '@/lib/economy';
+import { coinsFor, correctCoins } from '@/lib/difficulty';
+import { fiftyFifty, HINT_COST } from '@/lib/economy';
 import { settleLives } from '@/lib/lives';
 import { QUESTION_TIME_MS, type AnswerMark } from '@/lib/scoring';
 import { topicRound } from '@/lib/topics';
@@ -37,7 +38,7 @@ export default function TopicScreen() {
 function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () => void }) {
   const { colors } = useTheme();
   const { t, L } = useT();
-  const [round] = useState(() => topicRound(category));
+  const [round] = useState(() => topicRound(category, { level: useGame.getState().topicLevel }));
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<AnswerLog[]>([]);
   const [marks, setMarks] = useState<AnswerMark[]>([]);
@@ -90,7 +91,7 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
   );
 
   const finish = (endedEarly: boolean, finalAnswers = answers) => {
-    const coins = finalAnswers.filter((a) => a.mark === 'correct').length * TOPIC_COINS_PER_CORRECT;
+    const coins = correctCoins(finalAnswers);
     finishTopicRound(category, finalAnswers, coins);
     setOutOfLives(false);
     setDone({ coins, endedEarly, doubled: false });
@@ -261,7 +262,7 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
           revealed={revealed}
           badge={
             revealed.mark === 'correct'
-              ? t('topics.coinsEarned', { n: TOPIC_COINS_PER_CORRECT })
+              ? t('topics.coinsEarned', { n: coinsFor(pq.question.difficulty) })
               : t('lives.lost')
           }
           nextLabel={isLast ? t('quiz.finish') : t('quiz.next')}

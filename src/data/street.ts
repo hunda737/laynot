@@ -1,5 +1,5 @@
 import type { Localized } from '@/i18n';
-import type { Question } from './questions';
+import type { Difficulty, Question } from './questions';
 
 export interface StreetQuestion extends Question {
   /** Share of people on the street who picked each choice, same order as `choices`. Sums to 100. */
@@ -23,6 +23,13 @@ export interface StreetEpisode {
 type Pair = [en: string, am: string];
 const L = ([en, am]: Pair): Localized => ({ en, am });
 
+/** Street questions take their level from real answers: over 60% right is easy, under 30% is hard. */
+export function levelFromStreet(pctRight: number): Difficulty {
+  if (pctRight > 60) return 'easy';
+  if (pctRight >= 30) return 'medium';
+  return 'hard';
+}
+
 function sq(
   id: string,
   text: Pair,
@@ -34,6 +41,7 @@ function sq(
   return {
     id,
     category: 'general',
+    difficulty: levelFromStreet(streetPicks[0]),
     text: L(text),
     choices: choices.map(L) as StreetQuestion['choices'],
     fact: L(fact),

@@ -1,6 +1,7 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { Share, StyleSheet, View } from 'react-native';
 
+import { DifficultyBadge } from '@/components/difficulty';
 import { Button, Card, Icon, IconButton, Pill, Screen, Txt } from '@/components/ui';
 import { useBoard } from '@/hooks/useBoard';
 import { useNow } from '@/hooks/useNow';
@@ -128,6 +129,7 @@ export default function DailyResult() {
                 {i + 1}. {L(q.text)}
               </Txt>
             </View>
+            <DifficultyBadge level={q.difficulty} />
             <Txt tone="success" variant="small" style={{ fontWeight: '700' }}>
               ✓ {L(q.choices[0])}
             </Txt>
