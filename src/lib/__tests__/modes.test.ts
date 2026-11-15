@@ -1,5 +1,5 @@
 import { FLASH_CARDS } from '@/data/flashcards';
-import { DIFFICULTIES, QUESTIONS } from '@/data/questions';
+import { CATEGORIES, DAILY_POOL, DIFFICULTIES, QUESTIONS } from '@/data/questions';
 import { refillSponsor, SPONSORED_QUESTIONS, sponsoredCategory } from '@/data/sponsors';
 import { STREET_EPISODES, streetAverage } from '@/data/street';
 import { dailyIds, dailyQuestions } from '../daily';
@@ -47,6 +47,12 @@ describe('rounds', () => {
     }
   });
 
+  it('draws the daily only from the broad-appeal pool', () => {
+    for (const day of ['2026-11-14', '2026-11-15', '2027-01-01']) {
+      expect(dailyQuestions(day).every((pq) => pq.question.daily === true)).toBe(true);
+    }
+  });
+
   it('gives each daily question all four answers in some order', () => {
     for (const pq of dailyQuestions('2026-11-14')) {
       expect([...pq.order].sort()).toEqual([0, 1, 2, 3]);
@@ -60,13 +66,36 @@ describe('content', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('has at least 4 questions per level in every category', () => {
-    const cats = new Set(QUESTIONS.map((q) => q.category));
-    for (const cat of cats) {
+  it('has 100 questions in every category, with at least 25 at each level', () => {
+    expect(CATEGORIES.map((c) => c.id)).toContain('books');
+    for (const { id } of CATEGORIES) {
+      const inCat = QUESTIONS.filter((q) => q.category === id);
+      expect(inCat).toHaveLength(100);
       for (const level of DIFFICULTIES) {
-        expect(QUESTIONS.filter((q) => q.category === cat && q.difficulty === level).length).toBeGreaterThanOrEqual(4);
+        expect(inCat.filter((q) => q.difficulty === level).length).toBeGreaterThanOrEqual(25);
       }
     }
+    expect(QUESTIONS.every((q) => CATEGORIES.some((c) => c.id === q.category))).toBe(true);
+  });
+
+  it('gives every question text, four distinct choices and a fact, in both languages', () => {
+    for (const q of QUESTIONS) {
+      for (const lang of ['en', 'am'] as const) {
+        expect(q.text[lang].trim()).not.toBe('');
+        expect(q.fact[lang].trim()).not.toBe('');
+        expect(q.choices.every((c) => c[lang].trim() !== '')).toBe(true);
+        expect(new Set(q.choices.map((c) => c[lang])).size).toBe(4);
+      }
+    }
+  });
+
+  it('keeps the Daily Challenge pool broad: enough at every level, and mostly general', () => {
+    for (const level of DIFFICULTIES) {
+      expect(DAILY_POOL.filter((q) => q.difficulty === level).length).toBeGreaterThanOrEqual(40);
+    }
+    expect(DAILY_POOL.filter((q) => q.category === 'general')).toHaveLength(100);
+    const niche = DAILY_POOL.filter((q) => ['books', 'football', 'entertainment'].includes(q.category));
+    expect(niche.length).toBeLessThanOrEqual(DAILY_POOL.length * 0.15);
   });
 
   it('has 10 flash cards per level', () => {

@@ -1,4 +1,4 @@
-import { QUESTIONS, type Question } from '@/data/questions';
+import { DAILY_POOL, type Question } from '@/data/questions';
 import type { DayKey } from './clock';
 import { DAILY_RAMP, rampedPick } from './difficulty';
 import { seeded, shuffle } from './rng';
@@ -13,11 +13,12 @@ export interface PlayableQuestion {
 
 /**
  * Same 10 questions and the same answer order for every player on a given day.
- * The set ramps up: 3 easy, 4 medium, 3 hard.
+ * The set ramps up: 3 easy, 4 medium, 3 hard. It draws only from the general-purpose pool,
+ * so a niche question (say, one about a single football club) never appears here.
  */
 export function dailyQuestions(day: DayKey): PlayableQuestion[] {
   const rand = seeded(`daily:${day}`);
-  return rampedPick(QUESTIONS, DAILY_RAMP, rand).map((question) => ({
+  return rampedPick(DAILY_POOL, DAILY_RAMP, rand).map((question) => ({
     question,
     order: shuffle([0, 1, 2, 3], rand),
   }));
