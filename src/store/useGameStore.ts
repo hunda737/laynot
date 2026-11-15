@@ -112,6 +112,8 @@ interface PersistedState {
   dayOffset: number;
   /** Demo only: refill a life every minute instead of every 30. */
   fastRefill: boolean;
+  /** Small banner ads on Home and the quiz screens. The demo controls can switch them off. */
+  showBanners: boolean;
 }
 
 interface Actions {
@@ -159,6 +161,7 @@ interface Actions {
   /** Replace progress with a returning player who has a 6-day streak. Keeps language and theme. */
   demoLoadSample: () => void;
   demoSetFastRefill: (on: boolean) => void;
+  demoSetBanners: (on: boolean) => void;
   demoShiftDays: (days: number) => void;
   demoResetClock: () => void;
   resetAll: () => void;
@@ -191,6 +194,7 @@ const initialState = (): PersistedState => ({
   flashStats: { rounds: 0, seen: 0, known: 0 },
   dayOffset: 0,
   fastRefill: false,
+  showBanners: true,
 });
 
 export const refillMsOf = (s: Pick<PersistedState, 'fastRefill'>) => (s.fastRefill ? FAST_REFILL_MS : REFILL_MS);
@@ -410,8 +414,17 @@ export const useGame = create<GameState>()(
       demoEmptyLives: () => set({ lives: 0, livesAnchor: nowTs() }),
       demoResetAds: () => set({ ads: { day: '', count: 0 } }),
       demoLoadSample: () => {
-        const { language, themePref, dayOffset, fastRefill, fastFriends } = get();
-        set({ ...initialState(), language, themePref, dayOffset, fastRefill, fastFriends, ...samplePlayer(todayKey(), nowTs()) });
+        const { language, themePref, dayOffset, fastRefill, fastFriends, showBanners } = get();
+        set({
+          ...initialState(),
+          language,
+          themePref,
+          dayOffset,
+          fastRefill,
+          fastFriends,
+          showBanners,
+          ...samplePlayer(todayKey(), nowTs()),
+        });
       },
       demoSetFastRefill: (on) => {
         // Settle at the old speed, then restart the countdown at the new one.
@@ -420,6 +433,8 @@ export const useGame = create<GameState>()(
         const v = settleLives({ lives: s.lives, anchor: s.livesAnchor }, now, refillMsOf(s));
         set({ fastRefill: on, lives: v.lives, livesAnchor: now });
       },
+
+      demoSetBanners: (showBanners) => set({ showBanners }),
 
       signUp: (profile) =>
         set({ profile: { ...profile, joinedDay: dayKey(nowTs()) }, signupPromptDismissed: true }),

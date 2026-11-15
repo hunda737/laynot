@@ -1,4 +1,4 @@
-import { daysBetween, type DayKey } from './clock';
+import { daysBetween, weekDays, type DayKey } from './clock';
 
 export interface Streak {
   current: number;
@@ -26,4 +26,37 @@ export function effectiveStreak(streak: Streak, today: DayKey): number {
 /** True when the player has a streak that ends unless they play today. */
 export function streakAtRisk(streak: Streak, today: DayKey): boolean {
   return streak.lastDay !== null && streak.current > 0 && daysBetween(streak.lastDay, today) === 1;
+}
+
+/**
+ * How one day of the current week looks on the streak strip:
+ * - `streak`: played, and part of the run that is still alive
+ * - `played`: played, but that run has since been broken
+ * - `today`: today, not played yet
+ * - `missed`: a past day with no play
+ * - `future`: not here yet
+ */
+export type StripState = 'streak' | 'played' | 'today' | 'missed' | 'future';
+
+export interface StripDay {
+  day: DayKey;
+  state: StripState;
+  isToday: boolean;
+}
+
+/** The Monday-to-Sunday week containing `today`, one entry per day, for the streak strip. */
+export function weekStrip(history: Record<DayKey, unknown>, streak: Streak, today: DayKey): StripDay[] {
+  const alive = effectiveStreak(streak, today);
+  return weekDays(today).map((day) => {
+    const isToday = day === today;
+    const played = history[day] !== undefined;
+    let state: StripState;
+    if (day > today) state = 'future';
+    else if (played) {
+      // Days back from the last play; inside the live run when smaller than its length.
+      const back = streak.lastDay === null ? -1 : daysBetween(day, streak.lastDay);
+      state = alive > 0 && back >= 0 && back < streak.current ? 'streak' : 'played';
+    } else state = isToday ? 'today' : 'missed';
+    return { day, state, isToday };
+  });
 }

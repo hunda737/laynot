@@ -1,16 +1,17 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, StyleSheet, View } from 'react-native';
 
 import { refillSponsor, type Sponsor } from '@/data/sponsors';
 import { useAdsLeft, useLives } from '@/hooks/useEconomy';
 import { useT } from '@/i18n';
 import { dayKey, formatCountdown } from '@/lib/clock';
 import { useGame } from '@/store/useGameStore';
-import { radius, space } from '@/theme/tokens';
+import { fixed, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 import { useRewardedAd } from './RewardedAd';
-import { Button, Card, Icon, Txt, type IconName } from './ui';
+import { PopIn, PressableScale } from './motion';
+import { Button, Card, Icon, ProgressBar, Txt, type IconName } from './ui';
 
 /**
  * Shown when a player has no lives. Every option leads back into play:
@@ -48,9 +49,13 @@ export function OutOfLivesSheet({
       <Modal visible={visible && !ad.modal && !refilling} transparent animationType="slide" onRequestClose={onClose}>
         <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={onClose}>
           <Pressable style={[styles.sheet, { backgroundColor: colors.bg }]} onPress={() => {}}>
-            <View style={styles.handle} />
+            <View style={[styles.handle, { backgroundColor: colors.border }]} />
             <View style={{ alignItems: 'center', gap: space.sm }}>
-              <Icon name="heart-dislike" size={40} color={colors.danger} />
+              <PopIn>
+                <View style={[styles.outIcon, { backgroundColor: colors.dangerSoft }]}>
+                  <Icon name="heart-dislike" size={34} color={colors.danger} />
+                </View>
+              </PopIn>
               <Txt variant="title" center>
                 {t('lives.outTitle')}
               </Txt>
@@ -66,26 +71,27 @@ export function OutOfLivesSheet({
                 {t('sponsor.refillUsed', { name: sponsor.name })}
               </Txt>
             ) : (
-              <Pressable
+              <PressableScale
                 accessibilityRole="button"
                 onPress={() => setRefilling(true)}
-                style={({ pressed }) => [styles.refill, { backgroundColor: sponsor.color, opacity: pressed ? 0.9 : 1 }]}
+                scaleTo={0.97}
+                style={[styles.refill, { backgroundColor: sponsor.color }]}
               >
                 <View style={styles.refillLogo}>
                   <Icon name={sponsor.icon} size={20} color={sponsor.color} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Txt variant="bodyStrong" style={{ color: '#FFFFFF' }}>
+                  <Txt variant="bodyStrong" tone="onAccent">
                     {t('sponsor.refill', { name: sponsor.name })}
                   </Txt>
-                  <Txt variant="small" style={{ color: '#FFFFFF', opacity: 0.9 }}>
+                  <Txt variant="small" tone="onAccent" style={{ opacity: 0.9 }}>
                     {t('sponsor.refillSub')}
                   </Txt>
                 </View>
-                <Txt variant="tiny" style={{ color: '#FFFFFF', opacity: 0.8 }}>
+                <Txt variant="tiny" tone="onAccent" style={{ opacity: 0.85 }}>
                   {t('common.sponsored').toUpperCase()}
                 </Txt>
-              </Pressable>
+              </PressableScale>
             )}
             <Button
               label={adsLeft > 0 ? t('lives.watchAd') : t('ad.capReached')}
@@ -143,48 +149,53 @@ const REFILL_MS = 2000;
 
 /** A short branded card: "This life refill is brought to you by...", then +1 life. */
 function SponsoredRefill({ sponsor, onDone }: { sponsor: Sponsor; onDone: () => void }) {
+  const { colors } = useTheme();
   const { t, L } = useT();
-  const [progress] = useState(() => new Animated.Value(0));
   const doneRef = useRef(onDone);
   useEffect(() => {
     doneRef.current = onDone;
   });
 
   useEffect(() => {
-    Animated.timing(progress, { toValue: 1, duration: REFILL_MS, useNativeDriver: false }).start();
     const id = setTimeout(() => doneRef.current(), REFILL_MS);
     return () => clearTimeout(id);
-  }, [progress]);
+  }, []);
 
   return (
     <Modal visible transparent animationType="fade" onRequestClose={() => {}}>
       <View style={[styles.refillScreen, { backgroundColor: sponsor.color }]}>
-        <Txt variant="tiny" style={{ color: '#FFFFFF', opacity: 0.8 }}>
+        <Txt variant="tiny" tone="onAccent" style={{ opacity: 0.85 }}>
           {t('common.sponsored').toUpperCase()}
         </Txt>
-        <View style={styles.refillBig}>
-          <Icon name={sponsor.icon} size={56} color={sponsor.color} />
-        </View>
-        <Txt center style={{ color: '#FFFFFF', opacity: 0.9 }}>
+        <PopIn>
+          <View style={styles.refillBig}>
+            <Icon name={sponsor.icon} size={56} color={sponsor.color} />
+          </View>
+        </PopIn>
+        <Txt center tone="onAccent" style={{ opacity: 0.9 }}>
           {t('sponsor.refillBy')}
         </Txt>
-        <Txt variant="title" center style={{ color: '#FFFFFF' }}>
+        <Txt variant="title" center tone="onAccent">
           {sponsor.name}
         </Txt>
-        <Txt center style={{ color: '#FFFFFF', opacity: 0.9 }}>
+        <Txt center tone="onAccent" style={{ opacity: 0.9 }}>
           {L(sponsor.tagline)}
         </Txt>
-        <View style={styles.refillLife}>
-          <Icon name="heart" size={22} color="#FFFFFF" />
-          <Txt variant="heading" style={{ color: '#FFFFFF' }}>
+        <PopIn delay={REFILL_MS * 0.6} style={styles.refillLife}>
+          <Icon name="heart" size={22} color={colors.onAccent} />
+          <Txt variant="heading" tone="onAccent">
             {t('ad.rewardLife')}
           </Txt>
-        </View>
-        <View style={styles.refillTrack}>
-          <Animated.View
-            style={[styles.refillFill, { width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }]}
-          />
-        </View>
+        </PopIn>
+        <ProgressBar
+          value={1}
+          color={colors.onAccent}
+          trackColor="rgba(255,255,255,0.3)"
+          height={6}
+          durationMs={REFILL_MS}
+          linear
+          style={styles.refillTrack}
+        />
       </View>
     </Modal>
   );
@@ -194,7 +205,9 @@ function Option({ icon, title, body, onPress }: { icon: IconName; title: string;
   const { colors } = useTheme();
   return (
     <Card onPress={onPress} style={styles.option}>
-      <Icon name={icon} color={colors.primary} />
+      <View style={[styles.optionIcon, { backgroundColor: colors.primarySoft }]}>
+        <Icon name={icon} size={18} color={colors.primary} />
+      </View>
       <View style={{ flex: 1 }}>
         <Txt variant="bodyStrong">{title}</Txt>
         <Txt variant="small" tone="muted">
@@ -218,13 +231,14 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  handle: { width: 40, height: 5, borderRadius: 3, backgroundColor: '#8886', alignSelf: 'center' },
+  handle: { width: 40, height: 5, borderRadius: 3, alignSelf: 'center' },
+  outIcon: { width: 68, height: 68, borderRadius: 34, alignItems: 'center', justifyContent: 'center' },
   option: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md },
+  optionIcon: { width: 36, height: 36, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center' },
   refill: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.md },
-  refillLogo: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  refillLogo: { width: 36, height: 36, borderRadius: 18, backgroundColor: fixed.white, alignItems: 'center', justifyContent: 'center' },
   refillScreen: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md, padding: space.xl },
-  refillBig: { width: 110, height: 110, borderRadius: 55, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center' },
+  refillBig: { width: 110, height: 110, borderRadius: 55, backgroundColor: fixed.white, alignItems: 'center', justifyContent: 'center' },
   refillLife: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.md },
-  refillTrack: { width: '70%', height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden', marginTop: space.lg },
-  refillFill: { height: '100%', backgroundColor: '#FFFFFF' },
+  refillTrack: { width: '70%', marginTop: space.lg },
 });

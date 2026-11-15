@@ -2,9 +2,12 @@ import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { useQuizAd } from '@/components/AdBanner';
+import { Confetti, FadeInUp, PopIn, useCountUp } from '@/components/motion';
 import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { CoinChip } from '@/components/status';
 import { StreetStats } from '@/components/StreetStats';
-import { Button, Icon, IconButton, Screen, Txt } from '@/components/ui';
+import { Button, HeroCard, Icon, ProgressBar, Screen, TopBar, Txt } from '@/components/ui';
 import { EPISODE_BY_ID, streetAverage, type StreetEpisode } from '@/data/street';
 import { useQuestionTimer } from '@/hooks/useQuestionTimer';
 import { useT } from '@/i18n';
@@ -12,7 +15,6 @@ import { coinsFor } from '@/lib/difficulty';
 import { shuffle } from '@/lib/rng';
 import { QUESTION_TIME_MS } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
-import { goBack } from '@/services/nav';
 import { useGame, type AnswerLog } from '@/store/useGameStore';
 import { radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -30,6 +32,7 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
   const { t, L } = useT();
   const finishStreet = useGame((s) => s.finishStreet);
   const alreadyPlayed = useGame((s) => !!s.streetResults[ep.id]);
+  const banner = useQuizAd('street');
 
   const [items] = useState(() => ep.questions.map((question) => ({ question, order: shuffle([0, 1, 2, 3], Math.random) })));
   const [index, setIndex] = useState(0);
@@ -40,6 +43,8 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
 
   const pq = items[index];
   const isLast = index >= items.length - 1;
+  const you = answers.filter((a) => a.mark === 'correct').length;
+  const shownYou = useCountUp(done ? you : 0, 700);
 
   const answer = useCallback(
     (pick: number | null) => {
@@ -73,64 +78,71 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
   };
 
   if (done) {
-    const you = answers.filter((a) => a.mark === 'correct').length;
     const avg = streetAverage(ep);
     const beat = you > avg;
     return (
       <Screen edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.top}>
-          <IconButton icon="close" onPress={goBack} label={t('common.close')} />
-          <Txt variant="heading" style={{ flex: 1 }} numberOfLines={1}>
-            {L(ep.title)}
-          </Txt>
-        </View>
-        <View style={[styles.hero, { backgroundColor: beat ? colors.success : ep.color }]}>
-          <Icon name={beat ? 'trophy' : 'people'} size={44} color="#FFFFFF" />
-          <Txt variant="title" center style={{ color: '#FFFFFF' }}>
-            {beat ? t('street.beat') : t('street.lost')}
-          </Txt>
-          <Txt variant="bodyStrong" center style={{ color: '#FFFFFF', opacity: 0.92 }}>
-            {t('street.summary', { you, avg: avg.toFixed(1), total: items.length })}
-          </Txt>
-          <CompareBars you={you} avg={avg} total={items.length} />
-          {done.coins > 0 && (
-            <View style={styles.coins}>
-              <Icon name="ellipse" size={16} color={colors.gold} />
-              <Txt variant="bodyStrong" style={{ color: colors.gold }}>
-                {t('topics.coinsEarned', { n: done.coins })}
-              </Txt>
-            </View>
-          )}
-        </View>
+        <TopBar left="close" title={L(ep.title)} />
+        <PopIn>
+          <HeroCard color={ep.color} align="center" watermark={beat ? 'trophy' : 'people'}>
+            <Txt variant="title" tone="onAccent" center>
+              {beat ? t('street.beat') : t('street.lost')}
+            </Txt>
+            <Txt
+              variant="number"
+              tone="onAccent"
+              center
+              style={{ fontVariant: ['tabular-nums'] }}
+              accessibilityLabel={t('street.summary', { you, avg: avg.toFixed(1), total: items.length })}
+            >
+              {shownYou}/{items.length}
+            </Txt>
+            <CompareBars you={you} avg={avg} total={items.length} />
+            {done.coins > 0 && (
+              <View style={{ marginTop: space.sm }}>
+                <CoinChip amount={done.coins} prefix="+" variant="onColor" />
+              </View>
+            )}
+          </HeroCard>
+        </PopIn>
         {done.replay && (
           <Txt tone="muted" center>
             {t('street.replayNote')}
           </Txt>
         )}
-        <Button label={t('street.more')} icon="albums" onPress={() => router.dismissTo('/street')} />
-        <Button label={t('street.replay')} kind="secondary" icon="refresh" onPress={onAgain} />
+        <FadeInUp delay={200} style={{ gap: space.md }}>
+          <Button label={t('street.more')} icon="albums" onPress={() => router.dismissTo('/street')} />
+          <Button label={t('street.replay')} kind="secondary" icon="refresh" onPress={onAgain} />
+        </FadeInUp>
+        <Confetti fire={beat} />
       </Screen>
     );
   }
 
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.top}>
-        <IconButton icon="close" onPress={goBack} label={t('common.close')} />
-        <ProgressDots marks={answers.map((a) => a.mark)} total={items.length} current={index} />
-      </View>
-      <View style={[styles.banner, { backgroundColor: ep.color }]}>
-        <Icon name="mic" size={16} color="#FFFFFF" />
-        <Txt variant="small" style={{ color: '#FFFFFF', fontWeight: '700', flex: 1 }} numberOfLines={1}>
+    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+      <TopBar
+        left="close"
+        center={<ProgressDots marks={answers.map((a) => a.mark)} total={items.length} current={index} />}
+      />
+
+      <View style={[styles.strip, { backgroundColor: ep.color }]}>
+        <Icon name="mic" size={16} color={colors.onAccent} />
+        <Txt variant="small" tone="onAccent" style={{ fontWeight: '700', flex: 1 }} numberOfLines={1}>
           {L(ep.location)} · {t('street.asked', { n: ep.peopleAsked })}
         </Txt>
       </View>
-      <TimerBar remaining={timer.remaining} limit={QUESTION_TIME_MS} stopped={!!revealed} />
+
+      <View style={{ gap: space.sm }}>
+        <Txt variant="small" tone="muted">
+          {t('quiz.question', { n: index + 1, total: items.length })}
+        </Txt>
+        <TimerBar remaining={timer.remaining} limit={QUESTION_TIME_MS} stopped={!!revealed} />
+      </View>
 
       <QuestionView
         pq={pq}
         revealed={revealed}
-        label={t('quiz.question', { n: index + 1, total: items.length })}
         onPick={(choice) => {
           haptic.tap();
           answer(choice);
@@ -153,7 +165,7 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
           <Button
             small
             kind="ghost"
-            icon="logo-tiktok"
+            icon="play-circle-outline"
             label={t('street.watch', { time: pq.question.clipAt })}
             onPress={() => setClipNote(true)}
           />
@@ -164,29 +176,38 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
           )}
         </RevealPanel>
       )}
+
+      {banner.inline}
     </Screen>
   );
 }
 
+/** Your score against the street's, as two bars on the result card. */
 function CompareBars({ you, avg, total }: { you: number; avg: number; total: number }) {
+  const { colors } = useTheme();
   const { t } = useT();
   const row = (label: string, value: number, strong: boolean) => (
     <View style={{ gap: 4 }}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-        <Txt variant="small" style={{ color: '#FFFFFF', fontWeight: strong ? '800' : '600' }}>
+      <View style={styles.cmpLabels}>
+        <Txt variant="small" tone="onAccent" style={{ fontWeight: strong ? '800' : '600' }}>
           {label}
         </Txt>
-        <Txt variant="small" style={{ color: '#FFFFFF', fontWeight: '800' }}>
+        <Txt variant="small" tone="onAccent" style={{ fontWeight: '800', fontVariant: ['tabular-nums'] }}>
           {value % 1 === 0 ? value : value.toFixed(1)}/{total}
         </Txt>
       </View>
-      <View style={styles.cmpTrack}>
-        <View style={[styles.cmpBar, { width: `${(value / total) * 100}%`, opacity: strong ? 1 : 0.6 }]} />
-      </View>
+      <ProgressBar
+        value={value}
+        max={total}
+        height={10}
+        durationMs={700}
+        color={strong ? colors.onAccent : 'rgba(255,255,255,0.6)'}
+        trackColor="rgba(255,255,255,0.25)"
+      />
     </View>
   );
   return (
-    <View style={{ alignSelf: 'stretch', gap: space.sm, marginTop: space.sm }}>
+    <View style={styles.cmp}>
       {row(t('street.youLabel'), you, true)}
       {row(t('street.avgLabel'), avg, false)}
     </View>
@@ -194,19 +215,14 @@ function CompareBars({ you, avg, total }: { you: number; avg: number; total: num
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  banner: { flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.sm, paddingHorizontal: space.md, borderRadius: radius.sm },
-  hero: { borderRadius: radius.lg, padding: space.xl, alignItems: 'center', gap: space.sm },
-  coins: {
+  strip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: space.sm,
+    paddingVertical: space.sm,
     paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    backgroundColor: '#FFFFFF',
-    marginTop: space.sm,
+    borderRadius: radius.sm,
   },
-  cmpTrack: { height: 10, borderRadius: radius.pill, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden' },
-  cmpBar: { height: '100%', borderRadius: radius.pill, backgroundColor: '#FFFFFF' },
+  cmp: { alignSelf: 'stretch', gap: space.sm, marginTop: space.sm },
+  cmpLabels: { flexDirection: 'row', justifyContent: 'space-between' },
 });

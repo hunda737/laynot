@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { useQuizAd } from '@/components/AdBanner';
+import { Confetti, FadeInUp, PopIn, useCountUp } from '@/components/motion';
 import { QuestionView, RevealPanel } from '@/components/quiz';
-import { Button, Header, Icon, Screen, Txt } from '@/components/ui';
+import { Button, HeroCard, Icon, ProgressBar, Screen, TopBar, Txt } from '@/components/ui';
 import { questionById } from '@/data';
 import { useT } from '@/i18n';
 import type { PlayableQuestion } from '@/lib/daily';
@@ -10,7 +12,7 @@ import { shuffle } from '@/lib/rng';
 import { haptic } from '@/services/haptics';
 import { goBack } from '@/services/nav';
 import { useGame, type AnswerLog } from '@/store/useGameStore';
-import { space } from '@/theme/tokens';
+import { modeColors, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 const REVIEW_SIZE = 10;
@@ -21,6 +23,7 @@ export default function Review() {
   const { t } = useT();
   const resolveMissed = useGame((s) => s.resolveMissed);
   const missedNow = useGame((s) => s.missed.length);
+  const banner = useQuizAd('review');
 
   // Snapshot at open, so clearing questions does not reshuffle the list mid-review.
   const [items] = useState<PlayableQuestion[]>(() =>
@@ -37,23 +40,40 @@ export default function Review() {
   const [cleared, setCleared] = useState(0);
 
   const finished = index >= items.length;
+  const empty = items.length === 0;
+  const shownCleared = useCountUp(started && finished ? cleared : 0, 700);
 
-  if (items.length === 0 || (started && finished)) {
+  if (empty || (started && finished)) {
     return (
       <Screen>
-        <Header title={t('review.title')} onBack={goBack} />
-        <View style={{ alignItems: 'center', gap: space.md, paddingVertical: space.xxl }}>
-          <Icon name={items.length === 0 ? 'happy-outline' : 'checkmark-done-circle'} size={56} color={colors.success} />
-          <Txt variant="heading" center>
-            {items.length === 0 ? t('review.empty') : `${cleared}/${items.length} ✓`}
-          </Txt>
-          {items.length > 0 && missedNow > 0 && (
-            <Txt tone="muted" center>
-              {t('review.count', { n: missedNow })}
-            </Txt>
-          )}
-        </View>
-        <Button label={t('common.done')} onPress={goBack} />
+        <TopBar title={t('review.title')} />
+        <PopIn>
+          <HeroCard color={modeColors.review} align="center">
+            <View style={styles.heroIcon}>
+              <Icon name={empty ? 'happy-outline' : 'checkmark-done'} size={34} color={colors.onAccent} />
+            </View>
+            {empty ? (
+              <Txt variant="heading" tone="onAccent" center>
+                {t('review.empty')}
+              </Txt>
+            ) : (
+              <>
+                <Txt variant="number" tone="onAccent" center style={{ fontVariant: ['tabular-nums'] }}>
+                  {shownCleared}/{items.length}
+                </Txt>
+                {missedNow > 0 && (
+                  <Txt variant="bodyStrong" tone="onAccent" center style={{ opacity: 0.92 }}>
+                    {t('review.count', { n: missedNow })}
+                  </Txt>
+                )}
+              </>
+            )}
+          </HeroCard>
+        </PopIn>
+        <FadeInUp delay={200}>
+          <Button label={t('common.done')} onPress={goBack} />
+        </FadeInUp>
+        <Confetti fire={!empty && cleared === items.length} />
       </Screen>
     );
   }
@@ -61,19 +81,39 @@ export default function Review() {
   if (!started) {
     return (
       <Screen>
-        <Header title={t('review.title')} onBack={goBack} />
-        <Icon name="refresh-circle" size={56} color={colors.primary} />
-        <Txt variant="title">{t('review.count', { n: missedNow })}</Txt>
-        <Txt tone="muted">{t('review.body')}</Txt>
-        <Button label={t('review.start')} icon="play" onPress={() => setStarted(true)} />
+        <TopBar title={t('review.title')} />
+        <PopIn>
+          <HeroCard color={modeColors.review} watermark="refresh-circle">
+            <View style={styles.heroIcon}>
+              <Icon name="refresh" size={30} color={colors.onAccent} />
+            </View>
+            <Txt variant="title" tone="onAccent">
+              {t('review.count', { n: missedNow })}
+            </Txt>
+            <Txt tone="onAccent" style={{ opacity: 0.92 }}>
+              {t('review.body')}
+            </Txt>
+          </HeroCard>
+        </PopIn>
+        <FadeInUp delay={200}>
+          <Button label={t('review.start')} icon="play" onPress={() => setStarted(true)} />
+        </FadeInUp>
       </Screen>
     );
   }
 
   const pq = items[index];
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']}>
-      <Header title={t('review.title')} onBack={goBack} right={<Txt tone="muted">{t('review.left', { n: items.length - index })}</Txt>} />
+    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+      <TopBar
+        title={t('review.title')}
+        right={
+          <Txt variant="small" tone="muted" style={{ fontWeight: '700', fontVariant: ['tabular-nums'] }}>
+            {t('review.left', { n: items.length - index })}
+          </Txt>
+        }
+      />
+      <ProgressBar value={index + (revealed ? 1 : 0)} max={items.length} color={modeColors.review} />
       <QuestionView
         pq={pq}
         revealed={revealed}
@@ -99,6 +139,19 @@ export default function Review() {
           }}
         />
       )}
+      {banner.inline}
     </Screen>
   );
 }
+
+const styles = StyleSheet.create({
+  heroIcon: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginBottom: space.xs,
+  },
+});

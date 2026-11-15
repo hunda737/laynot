@@ -4,9 +4,11 @@ import { StyleSheet, View } from 'react-native';
 
 import { OutOfLivesSheet } from '@/components/OutOfLivesSheet';
 import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { AdBanner, useQuizAd } from '@/components/AdBanner';
+import { Confetti, FadeInUp, PopIn, useCountUp } from '@/components/motion';
 import { useRewardedAd } from '@/components/RewardedAd';
-import { CoinsPill, LivesPill } from '@/components/status';
-import { Button, Icon, IconButton, Screen, Txt } from '@/components/ui';
+import { CoinChip, Hearts } from '@/components/status';
+import { Button, HeroCard, Screen, TopBar, Txt } from '@/components/ui';
 import { CATEGORIES, type CategoryId } from '@/data/questions';
 import { SponsorStrip } from '@/components/SponsorStrip';
 import { SPONSOR_BY_ID, sponsoredCategory } from '@/data/sponsors';
@@ -21,7 +23,7 @@ import { topicRound } from '@/lib/topics';
 import { haptic } from '@/services/haptics';
 import { goBack } from '@/services/nav';
 import { nowTs, refillMsOf, todayKey, useGame, type AnswerLog } from '@/store/useGameStore';
-import { radius, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 const currentLives = () => {
@@ -37,7 +39,7 @@ export default function TopicScreen() {
 }
 
 function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () => void }) {
-  const { colors } = useTheme();
+  const { cat } = useTheme();
   const { t, L } = useT();
   // The sponsor is fixed when the round starts, so a round never changes sponsor midway.
   const [presenter] = useState(() => {
@@ -63,6 +65,10 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
   const missedCount = useGame((s) => s.missed.length);
   const adsLeft = useAdsLeft();
   const ad = useRewardedAd();
+  // A sponsored round already carries its sponsor's strip and question, so it gets no banner.
+  const banner = useQuizAd('topic', { disabled: !!presenter });
+  const correctCount = answers.filter((a) => a.mark === 'correct').length;
+  const shownCorrect = useCountUp(done ? correctCount : 0, 700);
 
   const pq = round[index];
   const isLast = index >= round.length - 1;
@@ -133,31 +139,23 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
   };
 
   if (done) {
-    const correct = answers.filter((a) => a.mark === 'correct').length;
+    const earned = done.doubled ? done.coins * 2 : done.coins;
     return (
       <Screen edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.top}>
-          <IconButton icon="close" onPress={goBack} label={t('common.close')} />
-          <Txt variant="heading" style={{ flex: 1 }}>
-            {t(`cat.${category}` as StringKey)}
-          </Txt>
-          <LivesPill />
-        </View>
-        <View style={[styles.hero, { backgroundColor: colors.primary }]}>
-          <Icon name="trophy" size={40} color={colors.onPrimary} />
-          <Txt variant="title" tone="onPrimary">
-            {t('topics.doneTitle')}
-          </Txt>
-          <Txt variant="number" tone="onPrimary">
-            {t('topics.doneScore', { n: correct, total: round.length })}
-          </Txt>
-          <View style={[styles.coins, { backgroundColor: colors.onPrimary }]}>
-            <Icon name="ellipse" size={16} color={colors.gold} />
-            <Txt variant="bodyStrong" tone="gold">
-              {t('topics.coinsEarned', { n: done.doubled ? done.coins * 2 : done.coins })}
+        <TopBar left="close" title={t(`cat.${category}` as StringKey)} right={<Hearts />} />
+        <PopIn>
+          <HeroCard color={cat[category].solid} align="center" watermark="trophy">
+            <Txt variant="title" tone="onAccent">
+              {t('topics.doneTitle')}
             </Txt>
-          </View>
-        </View>
+            <Txt variant="number" tone="onAccent" center style={{ fontVariant: ['tabular-nums'] }}>
+              {t('topics.doneScore', { n: shownCorrect, total: round.length })}
+            </Txt>
+            <View style={{ marginTop: space.sm }}>
+              <CoinChip amount={earned} prefix="+" variant="onColor" />
+            </View>
+          </HeroCard>
+        </PopIn>
         {presenter && (
           <SponsorStrip
             sponsor={presenter}
@@ -169,47 +167,51 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
             {t('topics.endedNoLives')}
           </Txt>
         )}
-        {done.coins > 0 &&
-          (done.doubled ? (
-            <Txt tone="success" center variant="bodyStrong">
-              {t('topics.doubled')}
-            </Txt>
-          ) : (
-            <Button
-              label={adsLeft > 0 ? t('topics.double', { n: done.coins }) : t('ad.capReached')}
-              kind="sponsor"
-              icon="play-circle"
-              disabled={adsLeft <= 0}
-              onPress={() =>
-                ad.show(t('ad.rewardCoins', { n: done.coins }), () => {
-                  addCoins(done.coins);
-                  setDone({ ...done, doubled: true });
-                })
-              }
-            />
-          ))}
-        <Button
-          label={t('topics.again')}
-          icon="refresh"
-          onPress={() => (currentLives() > 0 ? onAgain() : setOutOfLives(true))}
-        />
-        <Button label={t('topics.other')} kind="secondary" onPress={() => router.dismissTo('/topics')} />
-        {missedCount > 0 && (
-          <Button label={t('review.title')} kind="ghost" icon="refresh" onPress={() => router.push('/review')} />
-        )}
+        <FadeInUp delay={200} style={{ gap: space.md }}>
+          {done.coins > 0 &&
+            (done.doubled ? (
+              <Txt tone="success" center variant="bodyStrong">
+                {t('topics.doubled')}
+              </Txt>
+            ) : (
+              <Button
+                label={adsLeft > 0 ? t('topics.double', { n: done.coins }) : t('ad.capReached')}
+                kind="sponsor"
+                icon="play-circle"
+                disabled={adsLeft <= 0}
+                onPress={() =>
+                  ad.show(t('ad.rewardCoins', { n: done.coins }), () => {
+                    addCoins(done.coins);
+                    setDone({ ...done, doubled: true });
+                  })
+                }
+              />
+            ))}
+          <Button
+            label={t('topics.again')}
+            icon="refresh"
+            onPress={() => (currentLives() > 0 ? onAgain() : setOutOfLives(true))}
+          />
+          <Button label={t('topics.other')} kind="secondary" onPress={() => router.dismissTo('/topics')} />
+          {missedCount > 0 && (
+            <Button label={t('review.title')} kind="ghost" icon="refresh" onPress={() => router.push('/review')} />
+          )}
+        </FadeInUp>
+        {!presenter && <AdBanner placement="result" seed="topic" />}
         <OutOfLivesSheet visible={outOfLives} onClose={() => setOutOfLives(false)} />
         {ad.modal}
+        <Confetti fire={correctCount === round.length} />
       </Screen>
     );
   }
 
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.top}>
-        <IconButton icon="close" onPress={goBack} label={t('common.close')} />
-        <ProgressDots marks={marks} total={round.length} current={index} />
-        <LivesPill />
-      </View>
+    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+      <TopBar
+        left="close"
+        center={<ProgressDots marks={marks} total={round.length} current={index} />}
+        right={<Hearts />}
+      />
 
       {presenter && <SponsorStrip sponsor={presenter} compact />}
 
@@ -218,7 +220,7 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
           <Txt variant="small" tone="muted">
             {t('quiz.question', { n: index + 1, total: round.length })}
           </Txt>
-          <CoinsPill />
+          <CoinChip size="sm" />
         </View>
         <TimerBar remaining={timer.remaining} limit={QUESTION_TIME_MS} stopped={!!revealed} />
       </View>
@@ -284,24 +286,11 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
           nextLabel={isLast ? t('quiz.finish') : t('quiz.next')}
           onNext={next}
         >
-          {sponsor && (
-            <View style={[styles.sponsor, { backgroundColor: sponsor.color }]}>
-              <Icon name={sponsor.icon} size={20} color="#FFFFFF" />
-              <View style={{ flex: 1 }}>
-                <Txt variant="bodyStrong" style={{ color: '#FFFFFF' }}>
-                  {sponsor.name}
-                </Txt>
-                <Txt variant="small" style={{ color: '#FFFFFF', opacity: 0.9 }}>
-                  {L(sponsor.tagline)}
-                </Txt>
-              </View>
-              <Txt variant="tiny" style={{ color: '#FFFFFF', opacity: 0.8 }}>
-                {t('common.sponsored').toUpperCase()}
-              </Txt>
-            </View>
-          )}
+          {sponsor && <SponsorStrip sponsor={sponsor} message={L(sponsor.tagline)} />}
         </RevealPanel>
       )}
+
+      {banner.inline}
 
       <OutOfLivesSheet
         visible={outOfLives}
@@ -324,18 +313,6 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   subRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   hints: { flexDirection: 'row', gap: space.sm },
-  hero: { borderRadius: radius.lg, padding: space.xl, alignItems: 'center', gap: space.sm },
-  coins: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    marginTop: space.sm,
-  },
-  sponsor: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.md },
 });

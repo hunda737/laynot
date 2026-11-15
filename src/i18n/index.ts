@@ -38,6 +38,12 @@ const MONTHS: Record<Language, string[]> = {
   am: ['ጃንዩ', 'ፌብሩ', 'ማርች', 'ኤፕሪ', 'ሜይ', 'ጁን', 'ጁላይ', 'ኦገስ', 'ሴፕቴ', 'ኦክቶ', 'ኖቬም', 'ዲሴም'],
 };
 
+/** One letter per weekday, Monday first, for the streak strip. */
+export const WEEKDAY_LETTERS: Record<Language, string[]> = {
+  en: ['M', 'T', 'W', 'T', 'F', 'S', 'S'],
+  am: ['ሰ', 'ማ', 'ረ', 'ሐ', 'ዓ', 'ቅ', 'እ'],
+};
+
 /** "2d 4h" / "2 ቀን 4 ሰዓት" for spans over a day, otherwise a h:mm:ss countdown. */
 export function formatSpan(lang: Language, ms: number): string {
   const days = Math.floor(ms / DAY_MS);

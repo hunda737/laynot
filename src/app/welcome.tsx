@@ -1,26 +1,23 @@
 import { router } from 'expo-router';
-import { useMemo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Brand } from '@/components/Brand';
-import { Button, Icon, Screen, Txt } from '@/components/ui';
-import { useT } from '@/i18n';
-import { dailyQuestions } from '@/lib/daily';
-import { randInt, seeded } from '@/lib/rng';
-import { todayKey, useGame } from '@/store/useGameStore';
-import { radius, space } from '@/theme/tokens';
-import { useTheme } from '@/theme/useTheme';
+import { CategoryTile } from '@/components/CategoryTile';
+import { FadeInUp, Float, PopIn } from '@/components/motion';
+import { Button, Screen, Segmented, Txt } from '@/components/ui';
+import { CATEGORIES } from '@/data/questions';
+import { useT, type Language } from '@/i18n';
+import { useGame } from '@/store/useGameStore';
+import { space } from '@/theme/tokens';
+
+/** The category tiles, laid out as three short rows. */
+const ROWS = [CATEGORIES.slice(0, 3), CATEGORIES.slice(3, 5), CATEGORIES.slice(5, 8)];
+const TILT = ['-6deg', '4deg', '-3deg', '7deg', '-5deg', '3deg', '-7deg', '5deg'];
 
 export default function Welcome() {
-  const { colors } = useTheme();
-  const { t, L } = useT();
+  const { t, lang } = useT();
   const markOnboarded = useGame((s) => s.markOnboarded);
-
-  const teaser = useMemo(() => {
-    const day = todayKey();
-    const first = dailyQuestions(day)[0].question;
-    return { text: first.text, wrong: randInt(seeded(`street:${day}`), 52, 78) };
-  }, []);
+  const setLanguage = useGame((s) => s.setLanguage);
 
   const play = () => {
     markOnboarded();
@@ -31,57 +28,67 @@ export default function Welcome() {
     router.replace('/home');
   };
 
+  let n = 0;
   return (
     <Screen scroll={false} edges={['top', 'bottom', 'left', 'right']} contentStyle={styles.root}>
-      <View style={{ gap: space.xl }}>
-        <Brand />
-        <View style={{ gap: space.md }}>
-          <Txt variant="tiny" tone="primary">
-            {t('welcome.kicker').toUpperCase()}
-          </Txt>
-          <Txt variant="hero">{t('welcome.title')}</Txt>
-          <Txt tone="muted">{t('welcome.body')}</Txt>
-        </View>
-
-        <View style={[styles.street, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={[styles.mic, { backgroundColor: colors.primarySoft }]}>
-            <Icon name="mic" size={20} color={colors.primary} />
-          </View>
-          <View style={{ flex: 1, gap: 4 }}>
-            <Txt variant="bodyStrong" numberOfLines={2}>
-              “{L(teaser.text)}”
-            </Txt>
-            <Txt variant="small" tone="danger" style={{ fontWeight: '700' }}>
-              {t('welcome.streetStat', { n: teaser.wrong })}
-            </Txt>
-          </View>
+      <View style={styles.top}>
+        <Brand size={24} />
+        <View style={{ width: 150 }}>
+          <Segmented<Language>
+            value={lang}
+            onChange={setLanguage}
+            options={[
+              { value: 'en', label: 'EN' },
+              { value: 'am', label: 'አማ' },
+            ]}
+          />
         </View>
       </View>
 
-      <View style={{ gap: space.md }}>
+      <View style={styles.middle}>
+        <View style={styles.mosaic}>
+          {ROWS.map((row, r) => (
+            <View key={r} style={styles.mosaicRow}>
+              {row.map((c) => {
+                const i = n++;
+                return (
+                  <PopIn key={c.id} index={i} delay={150}>
+                    <Float index={i}>
+                      <CategoryTile id={c.id} size="sm" style={{ transform: [{ rotate: TILT[i % TILT.length] }] }} />
+                    </Float>
+                  </PopIn>
+                );
+              })}
+            </View>
+          ))}
+        </View>
+
+        <FadeInUp delay={520} style={{ gap: space.md }}>
+          <Txt variant="hero" center>
+            {t('welcome.title')}
+          </Txt>
+          <Txt tone="muted" center>
+            {t('welcome.body')}
+          </Txt>
+        </FadeInUp>
+      </View>
+
+      <FadeInUp delay={680} style={{ gap: space.lg }}>
         <Button label={t('welcome.cta')} icon="play" onPress={play} />
-        <Txt variant="small" tone="muted" center>
-          {t('welcome.noSignup')}
-        </Txt>
-        <Pressable onPress={skip} hitSlop={8} accessibilityRole="button">
-          <Txt variant="small" tone="primary" center style={{ fontWeight: '700' }}>
+        <Pressable onPress={skip} hitSlop={10} accessibilityRole="button">
+          <Txt variant="small" tone="muted" center style={{ fontWeight: '700' }}>
             {t('welcome.skip')}
           </Txt>
         </Pressable>
-      </View>
+      </FadeInUp>
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { justifyContent: 'space-between', paddingTop: space.xxl },
-  street: {
-    flexDirection: 'row',
-    gap: space.md,
-    alignItems: 'center',
-    padding: space.lg,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-  },
-  mic: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  root: { justifyContent: 'space-between', paddingTop: space.lg },
+  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  middle: { gap: space.xxl, alignItems: 'center' },
+  mosaic: { gap: space.lg, alignItems: 'center' },
+  mosaicRow: { flexDirection: 'row', gap: space.lg },
 });

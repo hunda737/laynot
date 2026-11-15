@@ -1,17 +1,26 @@
 import { View } from 'react-native';
 
 import { hashString } from '@/lib/rng';
-import { Txt } from './ui';
+import { useTheme } from '@/theme/useTheme';
+import { Icon, Txt } from './ui';
 
-const COLORS = ['#E5432A', '#2563EB', '#059669', '#7C3AED', '#D97706', '#DB2777', '#0891B2', '#65A30D'];
+const COLORS = ['#D93A21', '#1D4ED8', '#15803D', '#7E22CE', '#925B06', '#BE185D', '#0E7490', '#4D7C0F'];
 
-export function Avatar({ name, size = 36, color }: { name: string; size?: number; color?: string }) {
-  const bg = color ?? COLORS[hashString(name) % COLORS.length];
+/** A circle with the first letter of a name. With no name it shows a person icon (a guest). */
+export function Avatar({ name, size = 36, color }: { name?: string | null; size?: number; color?: string }) {
+  const { colors } = useTheme();
+  const bg = color ?? (name ? COLORS[hashString(name) % COLORS.length] : colors.surfaceAlt);
   return (
     <View
       style={{ width: size, height: size, borderRadius: size / 2, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}
     >
-      <Txt style={{ color: '#FFFFFF', fontWeight: '800', fontSize: size * 0.42 }}>{name.slice(0, 1).toUpperCase()}</Txt>
+      {name ? (
+        <Txt tone="onAccent" style={{ fontWeight: '800', fontSize: size * 0.42 }}>
+          {name.slice(0, 1).toUpperCase()}
+        </Txt>
+      ) : (
+        <Icon name="person" size={size * 0.5} color={colors.textMuted} />
+      )}
     </View>
   );
 }

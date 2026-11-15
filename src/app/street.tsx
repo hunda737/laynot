@@ -1,13 +1,16 @@
 import { router } from 'expo-router';
 import { StyleSheet, View } from 'react-native';
 
-import { Card, Header, Icon, Screen, Txt } from '@/components/ui';
+import { FadeInUp, Pulse } from '@/components/motion';
+import { Badge, Card, Icon, Screen, TopBar, Txt } from '@/components/ui';
 import { STREET_EPISODES } from '@/data/street';
 import { formatDay, useT } from '@/i18n';
-import { goBack } from '@/services/nav';
 import { useGame } from '@/store/useGameStore';
-import { radius, space } from '@/theme/tokens';
+import { space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
+
+/** Cards past this one arrive together, so a long list does not keep the reader waiting. */
+const MAX_STAGGER = 10;
 
 export default function Street() {
   const { colors } = useTheme();
@@ -18,55 +21,66 @@ export default function Street() {
 
   return (
     <Screen>
-      <Header title={t('street.title')} onBack={goBack} />
-      <Txt tone="muted">{t('street.body')}</Txt>
+      <TopBar title={t('street.title')} />
+      <FadeInUp>
+        <Txt tone="muted">{t('street.body')}</Txt>
+      </FadeInUp>
 
-      {episodes.map((ep) => {
+      {episodes.map((ep, i) => {
         const r = results[ep.id];
         return (
-          <Card
-            key={ep.id}
-            onPress={() => router.push({ pathname: '/street/[episode]', params: { episode: ep.id } })}
-            style={{ padding: 0, overflow: 'hidden', gap: 0 }}
-          >
-            <View style={[styles.thumb, { backgroundColor: ep.color }]}>
-              <View style={styles.play}>
-                <Icon name="play" size={26} color={ep.color} />
+          <FadeInUp key={ep.id} index={Math.min(i + 1, MAX_STAGGER)}>
+            <Card
+              onPress={() => router.push({ pathname: '/street/[episode]', params: { episode: ep.id } })}
+              style={styles.card}
+            >
+              <View style={[styles.thumb, { backgroundColor: ep.color }]}>
+                <View style={[StyleSheet.absoluteFill, { pointerEvents: 'none' }]}>
+                  <View style={[styles.shape, styles.shapeA]} />
+                  <View style={[styles.shape, styles.shapeB]} />
+                  <View style={[styles.shape, styles.shapeC]} />
+                  <View style={styles.watermark}>
+                    <Icon name="mic" size={96} color="rgba(255,255,255,0.16)" />
+                  </View>
+                </View>
+                {/* The play button breathes on episodes not played yet. */}
+                <Pulse active={!r} to={1.08}>
+                  <View style={[styles.play, { backgroundColor: colors.onAccent }]}>
+                    <Icon name="play" size={26} color={ep.color} />
+                  </View>
+                </Pulse>
+                <View style={styles.topLeft}>
+                  {!r && <Badge label={t('street.new').toUpperCase()} bg={colors.onAccent} fg={ep.color} />}
+                </View>
+                <View style={styles.bottomRight}>
+                  <Badge label={ep.duration} icon="time-outline" bg={colors.overlay} fg={colors.onAccent} />
+                </View>
               </View>
-              <View style={styles.duration}>
-                <Txt variant="tiny" style={{ color: '#FFFFFF' }}>
-                  {ep.duration}
-                </Txt>
-              </View>
-              {!r && (
-                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                  <Txt variant="tiny" tone="onPrimary">
-                    {t('street.new').toUpperCase()}
+              <View style={styles.body}>
+                <Txt variant="heading">{L(ep.title)}</Txt>
+                <View style={styles.meta}>
+                  <Icon name="location" size={14} color={colors.textMuted} />
+                  <Txt variant="small" tone="muted" style={{ flex: 1 }} numberOfLines={1}>
+                    {L(ep.location)} · {formatDay(lang, ep.posted)}
                   </Txt>
                 </View>
-              )}
-            </View>
-            <View style={styles.body}>
-              <Txt variant="heading">{L(ep.title)}</Txt>
-              <View style={styles.meta}>
-                <Icon name="location" size={14} color={colors.textMuted} />
-                <Txt variant="small" tone="muted">
-                  {L(ep.location)} · {formatDay(lang, ep.posted)}
-                </Txt>
-              </View>
-              <View style={styles.meta}>
-                <Icon name="people" size={14} color={colors.textMuted} />
-                <Txt variant="small" tone="muted" style={{ flex: 1 }}>
-                  {t('street.asked', { n: ep.peopleAsked })}
-                </Txt>
-                {r && (
-                  <Txt variant="small" tone="success" style={{ fontWeight: '800' }}>
-                    {t('street.you', { n: r.correct, total: r.total })}
+                <View style={styles.meta}>
+                  <Icon name="people" size={14} color={colors.textMuted} />
+                  <Txt variant="small" tone="muted" style={{ flex: 1 }} numberOfLines={1}>
+                    {t('street.asked', { n: ep.peopleAsked })}
                   </Txt>
-                )}
+                  {r && (
+                    <Badge
+                      label={t('street.you', { n: r.correct, total: r.total })}
+                      icon="checkmark-circle"
+                      bg={colors.successSoft}
+                      fg={colors.success}
+                    />
+                  )}
+                </View>
               </View>
-            </View>
-          </Card>
+            </Card>
+          </FadeInUp>
         );
       })}
     </Screen>
@@ -74,26 +88,16 @@ export default function Street() {
 }
 
 const styles = StyleSheet.create({
-  thumb: { height: 120, alignItems: 'center', justifyContent: 'center' },
-  play: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingLeft: 3,
-  },
-  duration: {
-    position: 'absolute',
-    right: space.sm,
-    bottom: space.sm,
-    backgroundColor: 'rgba(0,0,0,0.55)',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: radius.sm,
-  },
-  badge: { position: 'absolute', left: space.sm, top: space.sm, paddingHorizontal: 8, paddingVertical: 4, borderRadius: radius.pill },
+  card: { padding: 0, overflow: 'hidden', gap: 0 },
+  thumb: { height: 132, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
+  shape: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.12)' },
+  shapeA: { width: 170, height: 170, borderRadius: 85, top: -80, right: -40 },
+  shapeB: { width: 110, height: 110, borderRadius: 55, bottom: -52, right: 84 },
+  shapeC: { width: 56, height: 56, borderRadius: 28, top: 20, right: 116 },
+  watermark: { position: 'absolute', left: -18, bottom: -22 },
+  play: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', paddingLeft: 3 },
+  topLeft: { position: 'absolute', left: space.md, top: space.md },
+  bottomRight: { position: 'absolute', right: space.md, bottom: space.md },
   body: { padding: space.lg, gap: 6 },
   meta: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

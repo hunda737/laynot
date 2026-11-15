@@ -4,9 +4,11 @@ import { StyleSheet, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
-import { QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { Confetti, FadeInUp, Pop, PopIn, useCountUp } from '@/components/motion';
+import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { CoinChip } from '@/components/status';
 import { ChoiceBars } from '@/components/StreetStats';
-import { Button, Card, Icon, IconButton, Screen, Txt } from '@/components/ui';
+import { Badge, Button, Card, HeroCard, Icon, Screen, TopBar, Txt } from '@/components/ui';
 import { useNow } from '@/hooks/useNow';
 import { useT } from '@/i18n';
 import {
@@ -24,12 +26,12 @@ import {
   type RoomMode,
   type Standing,
 } from '@/lib/live';
-import { scoreAnswer } from '@/lib/scoring';
+import { scoreAnswer, type AnswerMark } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
 import { goBack } from '@/services/nav';
 import { shareMessage } from '@/services/share';
 import { nowTs, todayKey, useGame, type AnswerLog } from '@/store/useGameStore';
-import { light, radius, space } from '@/theme/tokens';
+import { fixed, medals, modeColors, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
 
 export default function LiveRoomScreen() {
@@ -68,6 +70,8 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
     [final, room, players, yours, youName],
   );
   const me = standings?.find((s) => s.isYou);
+  // Zero until the final results appear, so the score counts up on the last screen.
+  const shownScore = useCountUp(me?.score ?? 0, 900);
 
   // Record the game once, when the final results first appear.
   const recorded = useRef(false);
@@ -107,34 +111,40 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
     const host = room.host;
     return (
       <Screen>
-        <View style={styles.top}>
-          <IconButton icon="close" onPress={close} label={t('common.close')} />
-          <Txt variant="heading" style={{ flex: 1 }}>
-            {t('live.title')}
-          </Txt>
-        </View>
-        <View style={[styles.codeCard, { backgroundColor: colors.sponsorStrong }]}>
-          <Txt variant="tiny" style={{ color: '#FFFFFF', opacity: 0.85 }}>
-            {t('live.codeLabel').toUpperCase()}
-          </Txt>
-          <Txt style={styles.code}>{code}</Txt>
-          {host ? (
-            <Txt style={{ color: '#FFFFFF' }}>{t('live.hostedBy', { name: host.name })}</Txt>
-          ) : (
-            <Button small kind="inverse" icon="share-social" label={t('live.shareCode')} onPress={() => shareMessage(t('live.shareText', { code }))} />
-          )}
-        </View>
+        <TopBar left="close" onLeft={close} title={t('live.title')} />
+        <PopIn>
+          <HeroCard color={modeColors.live} align="center" pattern="rings">
+            <Txt variant="tiny" tone="onAccent" style={{ opacity: 0.85 }}>
+              {t('live.codeLabel').toUpperCase()}
+            </Txt>
+            <Txt tone="onAccent" style={styles.code}>
+              {code}
+            </Txt>
+            {host ? (
+              <Txt tone="onAccent">{t('live.hostedBy', { name: host.name })}</Txt>
+            ) : (
+              <Button small kind="ink" icon="share-social" label={t('live.shareCode')} onPress={() => shareMessage(t('live.shareText', { code }))} />
+            )}
+          </HeroCard>
+        </PopIn>
 
-        <View style={styles.lobbyHead}>
-          <Txt variant="heading">{t('live.lobby')}</Txt>
-          <Txt variant="small" tone="muted">
-            {t('live.players', { n: players.length + 1 })}
+        <FadeInUp index={1} style={styles.lobbyHead}>
+          <Txt variant="heading" style={{ flex: 1 }}>
+            {t('live.lobby')}
           </Txt>
-        </View>
+          <Pop trigger={players.length}>
+            <Badge icon="people" label={t('live.players', { n: players.length + 1 })} bg={modeColors.live} fg={colors.onAccent} />
+          </Pop>
+        </FadeInUp>
         <View style={styles.grid}>
-          <PlayerChip name={youName} you />
+          <PopIn key="you">
+            <PlayerChip name={youName} you />
+          </PopIn>
+          {/* Keyed by player, so only someone who just joined pops in. */}
           {players.map((p) => (
-            <PlayerChip key={p.bot.id} name={p.bot.name} />
+            <PopIn key={p.bot.id}>
+              <PlayerChip name={p.bot.name} />
+            </PopIn>
           ))}
         </View>
 
@@ -173,34 +183,34 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
     const coins = liveCoins(me.correct, me.rank);
     return (
       <Screen>
-        <View style={styles.top}>
-          <IconButton icon="close" onPress={() => router.dismissTo('/live')} label={t('common.close')} />
-          <Txt variant="heading" style={{ flex: 1 }}>
-            {t('live.final')}
-          </Txt>
-        </View>
-        <View style={[styles.codeCard, { backgroundColor: me.rank === 1 ? light.success : colors.sponsorStrong }]}>
-          <Icon name="trophy" size={40} color="#FFFFFF" />
-          <Txt variant="title" center style={{ color: '#FFFFFF' }}>
-            {t('live.place', { rank: me.rank, total: standings.length })}
-          </Txt>
-          <Txt variant="bodyStrong" style={{ color: '#FFFFFF' }}>
-            {me.score} {t('common.pts')}
-          </Txt>
-          <View style={styles.coins}>
-            <Icon name="ellipse" size={14} color={colors.gold} />
-            <Txt variant="bodyStrong" tone="gold">
-              {t('topics.coinsEarned', { n: coins })}
+        <TopBar left="close" onLeft={() => router.dismissTo('/live')} title={t('live.final')} />
+        <PopIn>
+          <HeroCard color={me.rank === 1 ? colors.successStrong : modeColors.live} align="center">
+            <Icon name="trophy" size={40} color={colors.onAccent} />
+            <Txt variant="title" tone="onAccent" center>
+              {t('live.place', { rank: me.rank, total: standings.length })}
             </Txt>
-          </View>
-        </View>
-        <StandingsList rows={standings} showMoves={false} />
-        <Button
-          label={t('live.again')}
-          icon="refresh"
-          onPress={() => router.replace({ pathname: '/live/[code]', params: { code: newRoomCode(), mode: 'host' } })}
-        />
-        <Button label={t('live.leave')} kind="secondary" onPress={() => router.dismissTo('/live')} />
+            <Txt variant="number" tone="onAccent" style={{ fontVariant: ['tabular-nums'] }}>
+              {shownScore}{' '}
+              <Txt variant="heading" tone="onAccent">
+                {t('common.pts')}
+              </Txt>
+            </Txt>
+            <PopIn delay={300} style={{ marginTop: space.xs }}>
+              <CoinChip amount={coins} prefix="+" variant="onColor" />
+            </PopIn>
+          </HeroCard>
+        </PopIn>
+        <StandingsList key="final" rows={standings} showMoves={false} />
+        <FadeInUp delay={300} style={{ gap: space.md }}>
+          <Button
+            label={t('live.again')}
+            icon="refresh"
+            onPress={() => router.replace({ pathname: '/live/[code]', params: { code: newRoomCode(), mode: 'host' } })}
+          />
+          <Button label={t('live.leave')} kind="secondary" onPress={() => router.dismissTo('/live')} />
+        </FadeInUp>
+        <Confetti fire={me.rank === 1} />
       </Screen>
     );
   }
@@ -211,16 +221,32 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
   const pq = room.questions[i];
   const mine = yours[i];
   const total = players.length + 1;
+  // Your answer to the current question stays hidden until the reveal.
+  const shown = phase.kind === 'question' ? i : i + 1;
+  const marks = Array.from({ length: shown }, (_, n): AnswerMark => {
+    const a = yours[n];
+    return !a || a.pick === null ? 'timeout' : a.pick === 0 ? 'correct' : 'wrong';
+  });
+  let score = 0;
+  for (let n = 0; n < shown; n++) score += yours[n]?.points ?? 0;
   const header = (
-    <View style={styles.top}>
-      <IconButton icon="close" onPress={close} label={t('common.close')} />
-      <View style={{ flex: 1 }}>
-        <Txt variant="small" tone="muted">
-          {t('live.title')} · {code}
-        </Txt>
-        <Txt variant="bodyStrong">{t('quiz.question', { n: i + 1, total: room.questions.length })}</Txt>
-      </View>
-    </View>
+    <TopBar
+      left="close"
+      onLeft={close}
+      center={<ProgressDots marks={marks} total={room.questions.length} current={i} />}
+      right={
+        <Pop trigger={score}>
+          <Txt variant="bodyStrong" style={styles.score}>
+            {score}
+          </Txt>
+        </Pop>
+      }
+    />
+  );
+  const where = (
+    <Txt variant="small" tone="muted">
+      {t('live.title')} · {code} · {t('quiz.question', { n: i + 1, total: room.questions.length })}
+    </Txt>
   );
 
   if (phase.kind === 'question') {
@@ -230,12 +256,17 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
     return (
       <Screen edges={['top', 'bottom', 'left', 'right']}>
         {header}
-        <TimerBar remaining={Math.max(0, LIVE_TIME_MS - elapsed)} limit={LIVE_TIME_MS} />
+        <View style={{ gap: space.sm }}>
+          {where}
+          <TimerBar remaining={Math.max(0, LIVE_TIME_MS - elapsed)} limit={LIVE_TIME_MS} />
+        </View>
         {mine ? (
           <Card style={{ gap: space.md }}>
             <Txt variant="question">{L(pq.question.text)}</Txt>
-            <View style={[styles.locked, { backgroundColor: colors.sponsorSoft }]}>
-              <Icon name="lock-closed" color={colors.sponsor} />
+            <View style={[styles.locked, { backgroundColor: colors.surfaceAlt }]}>
+              <PopIn style={[styles.lockIcon, { backgroundColor: modeColors.live }]}>
+                <Icon name="lock-closed" size={16} color={colors.onAccent} />
+              </PopIn>
               <Txt variant="bodyStrong" style={{ flex: 1 }}>
                 {mine.pick === null ? t('quiz.timeout') : L(pq.question.choices[mine.pick])}
               </Txt>
@@ -244,6 +275,7 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
           </Card>
         ) : (
           <QuestionView
+            key="question"
             pq={pq}
             revealed={null}
             onPick={(choice) => {
@@ -261,14 +293,15 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
           <Txt variant="small" tone="muted">
             {t('live.answered', { n: answeredBots.length + (mine ? 1 : 0), total })}
           </Txt>
+          {/* Each face pops as that player answers. Scale only, so nothing around the answers moves. */}
           <View style={styles.faces}>
-            <View style={{ opacity: mine ? 1 : 0.3 }}>
-              <Avatar name={youName} size={30} color={colors.primary} />
-            </View>
+            <Pop trigger={!!mine} style={{ opacity: mine ? 1 : 0.3 }}>
+              <Avatar name={youName} size={30} color={colors.primaryStrong} />
+            </Pop>
             {players.map((p) => (
-              <View key={p.bot.id} style={{ opacity: answeredIds.has(p.bot.id) ? 1 : 0.3 }}>
+              <Pop key={p.bot.id} trigger={answeredIds.has(p.bot.id)} style={{ opacity: answeredIds.has(p.bot.id) ? 1 : 0.3 }}>
                 <Avatar name={p.bot.name} size={30} />
-              </View>
+              </Pop>
             ))}
           </View>
         </View>
@@ -287,7 +320,9 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
     return (
       <Screen edges={['top', 'bottom', 'left', 'right']}>
         {header}
-        <QuestionView pq={pq} revealed={log} onPick={() => {}} />
+        {where}
+        {/* Same key as in the question phase: after a timeout the answers stay put and only show the result. */}
+        <QuestionView key="question" pq={pq} revealed={log} onPick={() => {}} />
         <RevealPanel
           pq={pq}
           revealed={log}
@@ -315,7 +350,8 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
     <Screen edges={['top', 'bottom', 'left', 'right']}>
       {header}
       <Txt variant="heading">{t('live.standings', { n: i + 1 })}</Txt>
-      <StandingsList rows={rows} showMoves={i > 0} />
+      {/* Keyed by question, so the rows arrive again on every standings view. */}
+      <StandingsList key={i} rows={rows} showMoves={i > 0} />
       <Button label={t('live.next')} icon="arrow-forward" onPress={() => setSkips((s) => ({ ...s, [`s${i}`]: nowTs() }))} />
       {leaveDialog}
     </Screen>
@@ -326,7 +362,7 @@ function PlayerChip({ name, you }: { name: string; you?: boolean }) {
   const { colors } = useTheme();
   return (
     <View style={[styles.chip, { backgroundColor: you ? colors.primarySoft : colors.surface, borderColor: you ? colors.primary : colors.border }]}>
-      <Avatar name={name} size={28} color={you ? colors.primary : undefined} />
+      <Avatar name={name} size={28} color={you ? colors.primaryStrong : undefined} />
       <Txt variant="small" numberOfLines={1} style={{ fontWeight: '700', maxWidth: 110 }}>
         {name}
       </Txt>
@@ -338,20 +374,24 @@ function StandingsList({ rows, showMoves }: { rows: Standing[]; showMoves: boole
   const { colors } = useTheme();
   return (
     <View style={{ gap: space.sm }}>
-      {rows.map((r) => {
+      {rows.map((r, index) => {
         const moved = r.prevRank - r.rank;
+        const medal = r.rank <= medals.length ? medals[r.rank - 1] : undefined;
         return (
-          <View
+          <FadeInUp
             key={r.id}
+            index={Math.min(index, 10)}
             style={[
               styles.row,
               { backgroundColor: r.isYou ? colors.primarySoft : colors.surface, borderColor: r.isYou ? colors.primary : colors.border },
             ]}
           >
-            <Txt variant="bodyStrong" style={styles.rank}>
-              {r.rank}
-            </Txt>
-            <Avatar name={r.name} color={r.isYou ? colors.primary : undefined} />
+            <View style={[styles.rank, medal ? { backgroundColor: medal } : null]}>
+              <Txt variant="small" style={[styles.rankText, { color: medal ? fixed.ink : colors.text }]}>
+                {r.rank}
+              </Txt>
+            </View>
+            <Avatar name={r.name} color={r.isYou ? colors.primaryStrong : undefined} />
             <Txt variant="bodyStrong" style={{ flex: 1 }} numberOfLines={1}>
               {r.name}
             </Txt>
@@ -361,7 +401,7 @@ function StandingsList({ rows, showMoves }: { rows: Standing[]; showMoves: boole
             <Txt variant="bodyStrong" style={{ fontVariant: ['tabular-nums'] }}>
               {r.score}
             </Txt>
-          </View>
+          </FadeInUp>
         );
       })}
     </View>
@@ -369,23 +409,15 @@ function StandingsList({ rows, showMoves }: { rows: Standing[]; showMoves: boole
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  codeCard: { borderRadius: radius.lg, padding: space.xl, alignItems: 'center', gap: space.sm },
-  code: { color: '#FFFFFF', fontSize: 48, lineHeight: 60, fontWeight: '900', letterSpacing: 10 },
-  lobbyHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
+  code: { fontSize: 48, lineHeight: 60, fontWeight: '900', letterSpacing: 10, fontVariant: ['tabular-nums'] },
+  score: { minWidth: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
+  lobbyHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingRight: space.md, padding: 4, borderRadius: radius.pill, borderWidth: 1 },
   locked: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.md },
+  lockIcon: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   faces: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  coins: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-  },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, borderWidth: 1 },
-  rank: { width: 26, textAlign: 'center', fontVariant: ['tabular-nums'] },
+  rank: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  rankText: { fontWeight: '800', fontVariant: ['tabular-nums'] },
 });

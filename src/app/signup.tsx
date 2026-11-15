@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { StyleSheet, TextInput, View } from 'react-native';
 
-import { Button, Header, Icon, Screen, Txt } from '@/components/ui';
+import { FadeInUp, PressableScale, Shake } from '@/components/motion';
+import { Button, Icon, Screen, TopBar, Txt } from '@/components/ui';
 import { useT } from '@/i18n';
 import { haptic } from '@/services/haptics';
 import { useGame } from '@/store/useGameStore';
@@ -12,6 +13,8 @@ import { useTheme } from '@/theme/useTheme';
 const DEMO_CODE = '1234';
 // Ethio telecom numbers start with 9, Safaricom Ethiopia with 7.
 const PHONE_RE = /^[79]\d{8}$/;
+
+type FieldId = 'name' | 'phone' | 'code';
 
 export default function Signup() {
   const { colors } = useTheme();
@@ -25,13 +28,23 @@ export default function Signup() {
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  // Which box the error belongs to, and how many times each has been refused (each refusal shakes it).
+  const [bad, setBad] = useState<FieldId | null>(null);
+  const [refused, setRefused] = useState<Record<FieldId, number>>({ name: 0, phone: 0, code: 0 });
 
   const close = () => (router.canGoBack() ? router.back() : router.replace('/home'));
 
+  const refuse = (field: FieldId, message: string) => {
+    setBad(field);
+    setRefused((r) => ({ ...r, [field]: r[field] + 1 }));
+    setError(message);
+  };
+
   const sendCode = () => {
-    if (name.trim().length < 2) return setError(t('signup.invalidName'));
-    if (!PHONE_RE.test(phone)) return setError(t('signup.invalidPhone'));
+    if (name.trim().length < 2) return refuse('name', t('signup.invalidName'));
+    if (!PHONE_RE.test(phone)) return refuse('phone', t('signup.invalidPhone'));
     setError(null);
+    setBad(null);
     setSending(true);
     // Pretend to call an SMS service.
     setTimeout(() => {
@@ -43,48 +56,50 @@ export default function Signup() {
   const verify = () => {
     if (code !== DEMO_CODE) {
       haptic.error();
-      return setError(t('signup.wrongCode'));
+      return refuse('code', t('signup.wrongCode'));
     }
     haptic.success();
     signUp({ name: name.trim(), phone, adult });
     close();
   };
 
-  const inputStyle = [
+  const inputStyle = (field: FieldId) => [
     styles.input,
     typeScale.bodyStrong,
-    { color: colors.text, backgroundColor: colors.surface, borderColor: colors.border },
+    { color: colors.text, backgroundColor: colors.surface, borderColor: bad === field ? colors.danger : colors.border },
   ];
 
   return (
     <Screen edges={['top', 'bottom', 'left', 'right']}>
-      <Header
+      <TopBar
         title={step === 'details' ? t('signup.title') : t('signup.codeTitle')}
-        onBack={step === 'code' ? () => setStep('details') : close}
+        onLeft={step === 'code' ? () => setStep('details') : close}
       />
 
       {step === 'details' ? (
-        <>
+        <FadeInUp key="details" style={styles.step}>
           <Txt tone="muted">{t('signup.body')}</Txt>
           <View style={{ gap: space.sm }}>
             <Txt variant="small" style={{ fontWeight: '700' }}>
               {t('signup.name')}
             </Txt>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder={t('signup.namePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              style={inputStyle}
-              autoCapitalize="words"
-              maxLength={24}
-            />
+            <Shake trigger={refused.name}>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder={t('signup.namePlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                style={inputStyle('name')}
+                autoCapitalize="words"
+                maxLength={24}
+              />
+            </Shake>
           </View>
           <View style={{ gap: space.sm }}>
             <Txt variant="small" style={{ fontWeight: '700' }}>
               {t('signup.phone')}
             </Txt>
-            <View style={{ flexDirection: 'row', gap: space.sm }}>
+            <Shake trigger={refused.phone} style={{ flexDirection: 'row', gap: space.sm }}>
               <View style={[styles.prefix, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
                 <Txt variant="bodyStrong">🇪🇹 +251</Txt>
               </View>
@@ -94,16 +109,18 @@ export default function Signup() {
                 placeholder="9XXXXXXXX"
                 placeholderTextColor={colors.textMuted}
                 keyboardType="phone-pad"
-                style={[inputStyle, { flex: 1 }]}
+                style={[inputStyle('phone'), { flex: 1 }]}
               />
-            </View>
+            </Shake>
             <Txt variant="small" tone="muted">
               {t('signup.phoneHint')}
             </Txt>
           </View>
-          <Pressable
+          <PressableScale
             onPress={() => setAdult((v) => !v)}
             style={styles.check}
+            scaleTo={0.98}
+            hitSlop={6}
             accessibilityRole="checkbox"
             accessibilityState={{ checked: adult }}
           >
@@ -118,37 +135,40 @@ export default function Signup() {
             <Txt variant="small" style={{ flex: 1 }}>
               {t('signup.age')}
             </Txt>
-          </Pressable>
+          </PressableScale>
           {error && <Txt tone="danger">{error}</Txt>}
           <Button label={t('signup.sendCode')} onPress={sendCode} loading={sending} />
-        </>
+        </FadeInUp>
       ) : (
-        <>
+        <FadeInUp key="code" style={styles.step}>
           <Txt tone="muted">{t('signup.codeBody', { phone: `+251 ${phone}` })}</Txt>
-          <TextInput
-            value={code}
-            onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 4))}
-            keyboardType="number-pad"
-            placeholder="••••"
-            placeholderTextColor={colors.textMuted}
-            style={[inputStyle, styles.code]}
-            autoFocus
-          />
-          <View style={[styles.demoNote, { backgroundColor: colors.sponsorSoft }]}>
-            <Icon name="information-circle" color={colors.sponsor} />
-            <Txt variant="small" tone="sponsor" style={{ fontWeight: '700' }}>
+          <Shake trigger={refused.code}>
+            <TextInput
+              value={code}
+              onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 4))}
+              keyboardType="number-pad"
+              placeholder="••••"
+              placeholderTextColor={colors.textMuted}
+              style={[inputStyle('code'), styles.code]}
+              autoFocus
+            />
+          </Shake>
+          <View style={[styles.demoNote, { backgroundColor: colors.surfaceAlt }]}>
+            <Icon name="information-circle" color={colors.textMuted} />
+            <Txt variant="small" style={{ fontWeight: '700', flex: 1 }}>
               {t('signup.demoCode')}
             </Txt>
           </View>
           {error && <Txt tone="danger">{error}</Txt>}
           <Button label={t('signup.verify')} onPress={verify} disabled={code.length < 4} />
-        </>
+        </FadeInUp>
       )}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  step: { gap: space.lg },
   input: { minHeight: 54, borderRadius: radius.md, borderWidth: 1, paddingHorizontal: space.lg },
   prefix: { borderRadius: radius.md, borderWidth: 1, paddingHorizontal: space.md, justifyContent: 'center' },
   check: { flexDirection: 'row', alignItems: 'center', gap: space.md },

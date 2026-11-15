@@ -2,9 +2,11 @@ import { Redirect, router, usePreventRemove, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { useQuizAd } from '@/components/AdBanner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { Pop } from '@/components/motion';
 import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
-import { IconButton, Screen, Txt } from '@/components/ui';
+import { Screen, TopBar, Txt } from '@/components/ui';
 import { useQuestionTimer } from '@/hooks/useQuestionTimer';
 import { useT } from '@/i18n';
 import { dailyQuestions } from '@/lib/daily';
@@ -23,6 +25,9 @@ export default function DailyPlay() {
   const progress = useGame((s) => s.dailyProgress);
   const recordDailyAnswer = useGame((s) => s.recordDailyAnswer);
   const finishDaily = useGame((s) => s.finishDaily);
+  // No banner on someone's very first Daily: the first minute in the app stays ad-free.
+  const playedBefore = useGame((s) => Object.keys(s.dailyHistory).length > 0);
+  const banner = useQuizAd('daily', { disabled: !playedBefore });
 
   const answers = useMemo(() => (progress?.day === day ? progress.answers : []), [progress, day]);
   // Resume where the player left off if the app was closed mid-round.
@@ -94,14 +99,19 @@ export default function DailyPlay() {
   if (record && !exitTo) return <Redirect href="/daily/result" />;
 
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.top}>
-        <IconButton icon="close" onPress={onClose} label={t('common.close')} />
-        <ProgressDots marks={answers.map((a) => a.mark)} total={questions.length} current={index} />
-        <Txt variant="bodyStrong" style={styles.score}>
-          {score}
-        </Txt>
-      </View>
+    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+      <TopBar
+        left="close"
+        onLeft={onClose}
+        center={<ProgressDots marks={answers.map((a) => a.mark)} total={questions.length} current={index} />}
+        right={
+          <Pop trigger={score}>
+            <Txt variant="bodyStrong" style={styles.score}>
+              {score}
+            </Txt>
+          </Pop>
+        }
+      />
 
       <View style={{ gap: space.sm }}>
         <Txt variant="small" tone="muted">
@@ -129,6 +139,8 @@ export default function DailyPlay() {
         />
       )}
 
+      {banner.inline}
+
       <ConfirmDialog
         visible={confirmQuit}
         title={t('quiz.quitTitle')}
@@ -144,6 +156,5 @@ export default function DailyPlay() {
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   score: { minWidth: 44, textAlign: 'right', fontVariant: ['tabular-nums'] },
 });

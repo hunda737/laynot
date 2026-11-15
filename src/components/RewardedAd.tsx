@@ -6,8 +6,10 @@ import { SPONSORS, type Sponsor } from '@/data/sponsors';
 import { useT } from '@/i18n';
 import { haptic } from '@/services/haptics';
 import { useGame } from '@/store/useGameStore';
-import { radius, space } from '@/theme/tokens';
-import { Button, Icon, IconButton, Txt } from './ui';
+import { fixed, radius, space } from '@/theme/tokens';
+import { useTheme } from '@/theme/useTheme';
+import { PopIn } from './motion';
+import { Button, Icon, IconButton, ProgressBar, Txt } from './ui';
 
 const AD_SECONDS = 5;
 
@@ -60,6 +62,7 @@ function RewardedAdModal({
   onClose: () => void;
   onClaim: () => void;
 }) {
+  const { colors } = useTheme();
   const { t, L } = useT();
   const [left, setLeft] = useState(AD_SECONDS);
 
@@ -75,7 +78,7 @@ function RewardedAdModal({
       <SafeAreaView style={[styles.root, { backgroundColor: sponsor.color }]}>
         <View style={styles.top}>
           <View style={styles.chip}>
-            <Txt variant="tiny" style={{ color: '#FFFFFF' }}>
+            <Txt variant="tiny" tone="onAccent">
               {t('ad.label').toUpperCase()}
             </Txt>
           </View>
@@ -83,29 +86,39 @@ function RewardedAdModal({
         </View>
 
         <View style={styles.creative}>
-          <View style={styles.logo}>
-            <Icon name={sponsor.icon} size={56} color={sponsor.color} />
-          </View>
-          <Txt variant="hero" center style={{ color: '#FFFFFF' }}>
+          <PopIn>
+            <View style={styles.logo}>
+              <Icon name={sponsor.icon} size={56} color={sponsor.color} />
+            </View>
+          </PopIn>
+          <Txt variant="hero" center tone="onAccent">
             {sponsor.name}
           </Txt>
-          <Txt variant="heading" center style={{ color: '#FFFFFF', opacity: 0.9 }}>
+          <Txt variant="heading" center tone="onAccent" style={{ opacity: 0.9 }}>
             {L(sponsor.tagline)}
           </Txt>
         </View>
 
         <View style={{ gap: space.md }}>
-          <View style={styles.track}>
-            <View style={[styles.fill, { width: `${((AD_SECONDS - left) / AD_SECONDS) * 100}%` }]} />
-          </View>
+          <ProgressBar
+            value={AD_SECONDS - left}
+            max={AD_SECONDS}
+            color={colors.onAccent}
+            trackColor="rgba(255,255,255,0.3)"
+            height={6}
+            durationMs={1000}
+            linear
+          />
           {done ? (
-            <Button label={t('ad.claim', { reward })} kind="inverse" icon="gift" onPress={onClaim} />
+            <PopIn>
+              <Button label={t('ad.claim', { reward })} kind="inverse" icon="gift" onPress={onClaim} />
+            </PopIn>
           ) : (
-            <Txt variant="bodyStrong" center style={{ color: '#FFFFFF' }}>
+            <Txt variant="bodyStrong" center tone="onAccent">
               {t('ad.wait', { n: left, reward })}
             </Txt>
           )}
-          <Txt variant="small" center style={{ color: '#FFFFFF', opacity: 0.75 }}>
+          <Txt variant="small" center tone="onAccent" style={{ opacity: 0.8 }}>
             {t('ad.closeEarly')}
           </Txt>
         </View>
@@ -123,10 +136,8 @@ const styles = StyleSheet.create({
     width: 112,
     height: 112,
     borderRadius: 56,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: fixed.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  track: { height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: '#FFFFFF' },
 });

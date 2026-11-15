@@ -4,16 +4,19 @@ import { StyleSheet, View } from 'react-native';
 
 import { DifficultyPicker } from '@/components/difficulty';
 import { FlashCard } from '@/components/FlashCard';
-import { CoinsPill } from '@/components/status';
-import { Button, Card, Icon, IconButton, Screen, Txt } from '@/components/ui';
+import { Confetti, FadeInUp, PopIn, useCountUp } from '@/components/motion';
+import { CoinChip } from '@/components/status';
+import { Button, Card, HeroCard, ProgressBar, Screen, TopBar, Txt } from '@/components/ui';
 import type { FlashCard as FlashCardData } from '@/data/flashcards';
 import { useT } from '@/i18n';
 import { flashDeck, knownFirstTry, markCard, missedCards, runFinished, startRun, type FlashRun } from '@/lib/flash';
 import { haptic } from '@/services/haptics';
-import { goBack } from '@/services/nav';
 import { useGame } from '@/store/useGameStore';
-import { radius, space } from '@/theme/tokens';
+import { modeColors, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
+
+/** Rows past this one arrive together, so a long list does not keep the reader waiting. */
+const MAX_STAGGER = 10;
 
 export default function FlashCardsScreen() {
   const [deckNo, setDeckNo] = useState(0);
@@ -37,6 +40,9 @@ function FlashRound({ onNewDeck }: { onNewDeck: () => void }) {
 
   const byId = (id: string) => deck.find((c) => c.id === id) as FlashCardData;
   const current = run.queue[0] ? byId(run.queue[0]) : null;
+  const seen = Object.keys(run.firstTry).length;
+  const known = knownFirstTry(run);
+  const shownKnown = useCountUp(done ? known : 0, 700);
 
   const end = (finalRun: FlashRun, completed: boolean) => {
     const coins = finishFlashRound(Object.keys(finalRun.firstTry).length, knownFirstTry(finalRun), completed);
@@ -44,63 +50,73 @@ function FlashRound({ onNewDeck }: { onNewDeck: () => void }) {
     setDone({ coins, completed });
   };
 
-  const mark = (known: boolean) => {
-    if (known) haptic.success();
+  const mark = (gotIt: boolean) => {
+    if (gotIt) haptic.success();
     else haptic.tap();
-    const next = markCard(run, known);
+    const next = markCard(run, gotIt);
     setRun(next);
     setFlipped(false);
     setTurnNo((n) => n + 1);
-    setNotice(!known);
+    setNotice(!gotIt);
     if (runFinished(next)) end(next, true);
+  };
+
+  const flip = () => {
+    haptic.tap();
+    setFlipped(true);
+    setNotice(false);
   };
 
   if (done) {
     const repeated = missedCards(run).map(byId);
     return (
       <Screen edges={['top', 'bottom', 'left', 'right']}>
-        <View style={styles.top}>
-          <IconButton icon="close" onPress={goBack} label={t('common.close')} />
-          <Txt variant="heading" style={{ flex: 1 }}>
-            {t('flash.title')}
-          </Txt>
-          <CoinsPill />
-        </View>
-        <View style={[styles.hero, { backgroundColor: colors.sponsorStrong }]}>
-          <Icon name="albums" size={40} color="#FFFFFF" />
-          <Txt variant="title" style={{ color: '#FFFFFF' }}>
-            {t('flash.doneTitle')}
-          </Txt>
-          <Txt variant="bodyStrong" center style={{ color: '#FFFFFF' }}>
-            {t('flash.doneScore', { n: knownFirstTry(run), total: Object.keys(run.firstTry).length })}
-          </Txt>
-          {done.coins > 0 && (
-            <View style={[styles.coins, { backgroundColor: '#FFFFFF' }]}>
-              <Icon name="ellipse" size={16} color={colors.gold} />
-              <Txt variant="bodyStrong" tone="gold">
-                {t('flash.roundCoins', { n: done.coins })}
-              </Txt>
-            </View>
-          )}
-        </View>
+        <TopBar left="close" title={t('flash.title')} right={<CoinChip />} />
+        <PopIn>
+          <HeroCard color={modeColors.flash} align="center" watermark="albums">
+            <Txt variant="title" tone="onAccent" center>
+              {t('flash.doneTitle')}
+            </Txt>
+            <Txt variant="number" tone="onAccent" center style={{ fontVariant: ['tabular-nums'] }}>
+              {shownKnown}/{seen}
+            </Txt>
+            <Txt variant="bodyStrong" tone="onAccent" center style={{ opacity: 0.92 }}>
+              {t('flash.doneScore', { n: known, total: seen })}
+            </Txt>
+            {done.coins > 0 && (
+              <View style={{ marginTop: space.sm }}>
+                <CoinChip amount={done.coins} prefix="+" variant="onColor" />
+              </View>
+            )}
+          </HeroCard>
+        </PopIn>
 
         {repeated.length > 0 && (
-          <Card>
-            <Txt variant="heading">{t('flash.repeat')}</Txt>
-            {repeated.map((c) => (
-              <View key={c.id} style={{ gap: 2 }}>
-                <Txt variant="small" tone="muted">
-                  {L(c.front)}
-                </Txt>
-                <Txt variant="bodyStrong">{L(c.back)}</Txt>
-              </View>
-            ))}
-          </Card>
+          <FadeInUp index={1}>
+            <Card>
+              <Txt variant="heading">{t('flash.repeat')}</Txt>
+              {repeated.map((c, i) => (
+                <FadeInUp key={c.id} index={Math.min(i + 2, MAX_STAGGER)} style={styles.repeat}>
+                  <View style={[styles.repeatDot, { backgroundColor: modeColors.flash }]} />
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt variant="small" tone="muted">
+                      {L(c.front)}
+                    </Txt>
+                    <Txt variant="bodyStrong">{L(c.back)}</Txt>
+                  </View>
+                </FadeInUp>
+              ))}
+            </Card>
+          </FadeInUp>
         )}
 
-        <DifficultyPicker value={level} onChange={setLevel} />
-        <Button label={t('flash.newDeck')} icon="refresh" onPress={onNewDeck} />
-        <Button label={t('flash.back')} kind="secondary" onPress={() => router.dismissTo('/topics')} />
+        <FadeInUp index={2} style={{ gap: space.lg }}>
+          <DifficultyPicker value={level} onChange={setLevel} />
+          <Button label={t('flash.newDeck')} icon="refresh" onPress={onNewDeck} />
+          <Button label={t('flash.back')} kind="secondary" onPress={() => router.dismissTo('/topics')} />
+        </FadeInUp>
+
+        <Confetti fire={done.completed && seen > 0 && known === seen} />
       </Screen>
     );
   }
@@ -110,80 +126,54 @@ function FlashRound({ onNewDeck }: { onNewDeck: () => void }) {
 
   return (
     <Screen edges={['top', 'bottom', 'left', 'right']}>
-      <View style={styles.top}>
-        <IconButton icon="close" onPress={goBack} label={t('common.close')} />
-        <View style={{ flex: 1, gap: 6 }}>
-          <View style={[styles.track, { backgroundColor: colors.surfaceAlt }]}>
-            <View style={[styles.fill, { backgroundColor: colors.sponsor, width: `${(100 * cleared) / total}%` }]} />
+      <TopBar
+        left="close"
+        center={
+          <View style={styles.progress}>
+            <ProgressBar value={cleared} max={total} color={modeColors.flash} />
+            <Txt variant="small" tone="muted" style={{ fontVariant: ['tabular-nums'] }}>
+              {t('flash.progress', { n: cleared, total })}
+            </Txt>
           </View>
-          <Txt variant="small" tone="muted">
-            {t('flash.progress', { n: cleared, total })}
-          </Txt>
-        </View>
-        <CoinsPill />
-      </View>
+        }
+        right={<CoinChip />}
+      />
 
       {current && (
-        <FlashCard
-          key={`${current.id}-${turnNo}`}
-          card={current}
-          flipped={flipped}
-          again={current.id in run.firstTry}
-          onFlip={() => {
-            haptic.tap();
-            setFlipped(true);
-            setNotice(false);
-          }}
-        />
+        // Keyed by turn, so every card rises into place face-down and centred.
+        <FadeInUp key={`${current.id}-${turnNo}`}>
+          <FlashCard card={current} flipped={flipped} again={current.id in run.firstTry} onFlip={flip} onSwipe={mark} />
+        </FadeInUp>
       )}
 
       {flipped ? (
-        <View style={styles.marks}>
+        <FadeInUp key="marks" distance={8} style={styles.marks}>
           <Button label={t('flash.missed')} kind="secondary" icon="close" onPress={() => mark(false)} style={{ flex: 1 }} />
           <Button label={t('flash.got')} icon="checkmark" onPress={() => mark(true)} style={{ flex: 1 }} />
-        </View>
+        </FadeInUp>
       ) : (
-        <Button
-          label={t('flash.tap')}
-          kind="secondary"
-          icon="sync"
-          onPress={() => {
-            haptic.tap();
-            setFlipped(true);
-            setNotice(false);
-          }}
-        />
+        <Button label={t('flash.tap')} kind="secondary" icon="sync" onPress={flip} />
       )}
 
       {notice && (
-        <Txt variant="small" tone="gold" center style={{ fontWeight: '700' }}>
-          {t('flash.comesBack')}
-        </Txt>
+        <FadeInUp distance={6}>
+          <Txt variant="small" center style={{ fontWeight: '700', color: colors.gold }}>
+            {t('flash.comesBack')}
+          </Txt>
+        </FadeInUp>
       )}
 
       <Txt variant="small" tone="muted" center>
         {t('flash.body')}
       </Txt>
-      {Object.keys(run.firstTry).length > 0 && (
-        <Button label={t('flash.end')} kind="ghost" small onPress={() => end(run, false)} />
-      )}
+      {seen > 0 && <Button label={t('flash.end')} kind="ghost" small onPress={() => end(run, false)} />}
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  top: { flexDirection: 'row', alignItems: 'center', gap: space.md },
-  track: { height: 8, borderRadius: radius.pill, overflow: 'hidden' },
-  fill: { height: '100%', borderRadius: radius.pill },
+  progress: { flex: 1, gap: 6 },
   marks: { flexDirection: 'row', gap: space.sm },
-  hero: { borderRadius: radius.lg, padding: space.xl, alignItems: 'center', gap: space.sm },
-  coins: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: space.md,
-    paddingVertical: 6,
-    borderRadius: radius.pill,
-    marginTop: space.sm,
-  },
+  repeat: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
+  repeatDot: { width: 6, height: 6, borderRadius: 3, marginTop: 7 },
 });
