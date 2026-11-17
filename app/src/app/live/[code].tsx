@@ -29,7 +29,7 @@ import {
 import { scoreAnswer, type AnswerMark } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
 import { goBack } from '@/services/nav';
-import { shareMessage } from '@/services/share';
+import { roomLink, shareMessage } from '@/services/share';
 import { nowTs, todayKey, useGame, type AnswerLog } from '@/store/useGameStore';
 import { fixed, medals, modeColors, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -123,7 +123,7 @@ function Game({ code, mode }: { code: string; mode: RoomMode }) {
             {host ? (
               <Txt tone="onAccent">{t('live.hostedBy', { name: host.name })}</Txt>
             ) : (
-              <Button small kind="ink" icon="share-social" label={t('live.shareCode')} onPress={() => shareMessage(t('live.shareText', { code }))} />
+              <Button small kind="ink" icon="share-social" label={t('live.shareCode')} onPress={() => shareRoom(t('live.shareText', { code }), code)} />
             )}
           </HeroCard>
         </PopIn>
@@ -421,3 +421,9 @@ const styles = StyleSheet.create({
   rank: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   rankText: { fontWeight: '800', fontVariant: ['tabular-nums'] },
 });
+
+/** Inside Telegram the invite also carries a link that opens the Mini App straight into the room. */
+function shareRoom(message: string, code: string) {
+  const link = roomLink(code);
+  return shareMessage(link ? `${message}\n${link}` : message);
+}

@@ -6,6 +6,7 @@ import { FadeInUp, PressableScale, Shake } from '@/components/motion';
 import { Button, Icon, Screen, TopBar, Txt } from '@/components/ui';
 import { useT } from '@/i18n';
 import { haptic } from '@/services/haptics';
+import { telegramDisplayName } from '@/services/telegram';
 import { useGame } from '@/store/useGameStore';
 import { radius, space, type as typeScale } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -22,7 +23,8 @@ export default function Signup() {
   const signUp = useGame((s) => s.signUp);
 
   const [step, setStep] = useState<'details' | 'code'>('details');
-  const [name, setName] = useState('');
+  // Inside Telegram, start from the player's Telegram name.
+  const [name, setName] = useState(() => telegramDisplayName());
   const [phone, setPhone] = useState('');
   const [adult, setAdult] = useState(false);
   const [code, setCode] = useState('');

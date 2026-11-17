@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Share, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AdBanner } from '@/components/AdBanner';
 import { DifficultyBadge } from '@/components/difficulty';
@@ -15,6 +15,7 @@ import { BOTS } from '@/data/players';
 import { dailyNumber, dayKey, formatCountdown, msUntilNextDay } from '@/lib/clock';
 import { shareGrid, type AnswerMark } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
+import { homeLink, shareMessage } from '@/services/share';
 import { useGame } from '@/store/useGameStore';
 import { fixed, radius, space } from '@/theme/tokens';
 import { useTheme } from '@/theme/useTheme';
@@ -63,11 +64,9 @@ export default function DailyResult() {
       streak: record.streakAfter,
       grid: shareGrid(marks),
     });
-    try {
-      await Share.share({ message });
-    } catch {
-      // Sharing is unavailable on some desktop browsers; nothing else to do in the demo.
-    }
+    // Inside Telegram, add the link that opens the Mini App, so friends can play from the chat.
+    const link = homeLink();
+    await shareMessage(link ? `${message}\n${link}` : message);
   };
 
   const goHome = () => (params.day && router.canGoBack() ? router.back() : router.dismissTo('/home'));

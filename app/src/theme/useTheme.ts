@@ -1,6 +1,7 @@
 import { useColorScheme } from 'react-native';
 
 import type { CategoryId } from '@/data/questions';
+import { useTelegramScheme } from '@/services/telegram';
 import { useGame } from '@/store/useGameStore';
 import { categoryColors, dark, light, shadow, type CategoryColor, type Palette, type Shadows } from './tokens';
 
@@ -13,7 +14,10 @@ export interface Theme {
 }
 
 export function useTheme(): Theme {
-  const system = useColorScheme();
+  const device = useColorScheme();
+  // Inside Telegram, "system" means Telegram's own light or dark mode.
+  const telegram = useTelegramScheme();
+  const system = telegram ?? device;
   const pref = useGame((s) => s.themePref);
   const scheme = pref === 'system' ? (system === 'dark' ? 'dark' : 'light') : pref;
   return {

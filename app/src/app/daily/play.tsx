@@ -12,6 +12,7 @@ import { useT } from '@/i18n';
 import { dailyQuestions } from '@/lib/daily';
 import { QUESTION_TIME_MS, scoreAnswer } from '@/lib/scoring';
 import { haptic } from '@/services/haptics';
+import { useTelegramCloseGuard } from '@/services/telegram';
 import { todayKey, useGame, type AnswerLog } from '@/store/useGameStore';
 import { space } from '@/theme/tokens';
 
@@ -90,6 +91,8 @@ export default function DailyPlay() {
 
   const midRound = answers.length > 0 && !record;
   usePreventRemove(midRound, () => setConfirmQuit(true));
+  // Inside Telegram, closing the whole Mini App mid-round asks first too.
+  useTelegramCloseGuard(midRound);
 
   const onClose = () => {
     if (midRound) setConfirmQuit(true);

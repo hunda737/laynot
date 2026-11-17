@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
@@ -28,6 +27,7 @@ import { FAST_REFILL_MS, gainLife, loseLife, MAX_LIVES, REFILL_MS, settleLives }
 import { samplePlayer } from '@/lib/sample';
 import { countCorrect, dailyCoins, type AnswerMark } from '@/lib/scoring';
 import { applyDailyPlay, EMPTY_STREAK, type Streak } from '@/lib/streak';
+import { gameStorage } from '@/services/storage';
 
 export type ThemePref = 'system' | 'light' | 'dark';
 
@@ -451,7 +451,7 @@ export const useGame = create<GameState>()(
     {
       name: 'laynot-game',
       version: 2,
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(gameStorage),
       // New keys get their defaults from the shallow merge. Version 2 changed the
       // question pool, so a half-played daily from before would no longer match.
       migrate: (persisted, version) => {
