@@ -1,0 +1,13 @@
+{
+  "name": "laynot-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Laynot's Telegram bot, API and Mini App host",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --import ./src/register.js src/index.js",
+    "dev": "node --watch --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --import ./src/register.js src/index.js",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --disable-warning=ExperimentalWarning --import ./src/register.js --test test/"
+  }
+}
