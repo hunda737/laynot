@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { AdBanner } from '@/components/AdBanner';
 import { Avatar } from '@/components/Avatar';
@@ -39,6 +39,10 @@ export default function Home() {
   const now = useNow();
   const today = dayKey(now);
   const [scrollY] = useState(() => new Animated.Value(0));
+  // The big numbers scale with the screen width: smaller on narrow phones, full size on wide screens.
+  const { width } = useWindowDimensions();
+  const pointsSize = Math.min(44, Math.max(28, Math.round(width * 0.09)));
+  const scoreSize = Math.min(40, Math.max(26, Math.round(width * 0.082)));
 
   const profile = useGame((s) => s.profile);
   const streak = useGame((s) => s.streak);
@@ -83,29 +87,6 @@ export default function Home() {
       </FadeInUp>
 
       <FadeInUp index={1}>
-        <Card style={{ gap: space.lg }}>
-          <View style={styles.stats}>
-            <PressableScale style={{ flex: 1 }} onPress={() => router.push('/ranks')} accessibilityRole="button">
-              <Txt variant="tiny" tone="muted">
-                {t('home.points').toUpperCase()}
-              </Txt>
-              <Txt variant="display" numberOfLines={1} adjustsFontSizeToFit style={{ fontVariant: ['tabular-nums'] }}>
-                {shownPoints.toLocaleString('en-US')}
-              </Txt>
-            </PressableScale>
-            <View style={styles.lives}>
-              <Txt variant="tiny" tone="muted">
-                {t('home.lives').toUpperCase()}
-              </Txt>
-              <Hearts size="lg" onPress={topic.lives > 0 ? () => router.push('/topics') : topic.showSheet} />
-            </View>
-          </View>
-          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
-          <WeekStreak days={days} streak={atRisk ? streak.current : streakNow} atRisk={atRisk} />
-        </Card>
-      </FadeInUp>
-
-      <FadeInUp index={2}>
         <HeroCard color={colors.primaryStrong} scrollY={scrollY} watermark={record ? 'trophy' : undefined}>
           <View style={styles.heroLabel}>
             <Icon name="calendar" size={14} color={colors.onAccent} />
@@ -118,7 +99,11 @@ export default function Home() {
               <Txt variant="small" tone="onAccent" style={{ opacity: 0.9 }}>
                 {t('home.dailyPlayed')}
               </Txt>
-              <Txt variant="number" tone="onAccent" style={{ fontVariant: ['tabular-nums'] }}>
+              <Txt
+                variant="number"
+                tone="onAccent"
+                style={{ fontSize: scoreSize, lineHeight: Math.round(scoreSize * 1.1), fontVariant: ['tabular-nums'] }}
+              >
                 {record.score}{' '}
                 <Txt variant="heading" tone="onAccent">
                   {t('common.pts')}
@@ -158,7 +143,39 @@ export default function Home() {
         </HeroCard>
       </FadeInUp>
 
-      <FadeInUp index={3} style={{ gap: space.md }}>
+      <FadeInUp index={2}>
+        <AdBanner placement="home" size="large" />
+      </FadeInUp>
+
+      <FadeInUp index={3}>
+        <Card style={{ gap: space.lg }}>
+          <View style={styles.stats}>
+            <PressableScale style={{ flex: 1 }} onPress={() => router.push('/ranks')} accessibilityRole="button">
+              <Txt variant="tiny" tone="muted">
+                {t('home.points').toUpperCase()}
+              </Txt>
+              <Txt
+                variant="display"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={{ fontSize: pointsSize, lineHeight: Math.round(pointsSize * 1.1), fontVariant: ['tabular-nums'] }}
+              >
+                {shownPoints.toLocaleString('en-US')}
+              </Txt>
+            </PressableScale>
+            <View style={styles.lives}>
+              <Txt variant="tiny" tone="muted">
+                {t('home.lives').toUpperCase()}
+              </Txt>
+              <Hearts size="lg" onPress={topic.lives > 0 ? () => router.push('/topics') : topic.showSheet} />
+            </View>
+          </View>
+          <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.border }} />
+          <WeekStreak days={days} streak={atRisk ? streak.current : streakNow} atRisk={atRisk} />
+        </Card>
+      </FadeInUp>
+
+      <FadeInUp index={4} style={{ gap: space.md }}>
         <SectionHeader title={t('home.categories')} actionLabel={t('common.seeAll')} onAction={() => router.push('/topics')} />
         <ScrollView
           horizontal
@@ -178,10 +195,6 @@ export default function Home() {
             );
           })}
         </ScrollView>
-      </FadeInUp>
-
-      <FadeInUp index={4}>
-        <AdBanner placement="home" />
       </FadeInUp>
 
       <FadeInUp index={5} style={{ gap: space.md }}>

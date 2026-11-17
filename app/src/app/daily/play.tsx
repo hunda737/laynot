@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { useQuizAd } from '@/components/AdBanner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Pop } from '@/components/motion';
-import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { AnswerReveal, ProgressDots, QuestionView, TimerBar } from '@/components/quiz';
 import { Screen, TopBar, Txt } from '@/components/ui';
 import { useQuestionTimer } from '@/hooks/useQuestionTimer';
 import { useT } from '@/i18n';
@@ -102,7 +102,7 @@ export default function DailyPlay() {
   if (record && !exitTo) return <Redirect href="/daily/result" />;
 
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+    <Screen edges={['top', 'bottom', 'left', 'right']}>
       <TopBar
         left="close"
         onLeft={onClose}
@@ -133,7 +133,8 @@ export default function DailyPlay() {
       />
 
       {revealed && (
-        <RevealPanel
+        <AnswerReveal
+          ad={banner}
           pq={pq}
           revealed={revealed}
           badge={revealed.mark === 'correct' ? `+${revealed.points} ${t('common.pts')}` : undefined}
@@ -141,8 +142,6 @@ export default function DailyPlay() {
           onNext={next}
         />
       )}
-
-      {banner.inline}
 
       <ConfirmDialog
         visible={confirmQuit}

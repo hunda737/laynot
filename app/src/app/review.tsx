@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useQuizAd } from '@/components/AdBanner';
 import { Confetti, FadeInUp, PopIn, useCountUp } from '@/components/motion';
-import { QuestionView, RevealPanel } from '@/components/quiz';
+import { AnswerReveal, QuestionView } from '@/components/quiz';
 import { Button, HeroCard, Icon, ProgressBar, Screen, TopBar, Txt } from '@/components/ui';
 import { questionById } from '@/data';
 import { useT } from '@/i18n';
@@ -104,7 +104,7 @@ export default function Review() {
 
   const pq = items[index];
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+    <Screen edges={['top', 'bottom', 'left', 'right']}>
       <TopBar
         title={t('review.title')}
         right={
@@ -128,7 +128,8 @@ export default function Review() {
         }}
       />
       {revealed && (
-        <RevealPanel
+        <AnswerReveal
+          ad={banner}
           pq={pq}
           revealed={revealed}
           badge={revealed.mark === 'correct' ? t('review.removed') : t('review.again')}
@@ -139,7 +140,6 @@ export default function Review() {
           }}
         />
       )}
-      {banner.inline}
     </Screen>
   );
 }

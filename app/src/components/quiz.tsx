@@ -151,21 +151,43 @@ export function QuestionView({
   );
 }
 
+/**
+ * What shows after an answer is picked, top to bottom: the ad, the Next button, then the
+ * right/wrong panel with the explanation.
+ */
+export function AnswerReveal({
+  ad,
+  nextLabel,
+  onNext,
+  ...panel
+}: {
+  /** The banner from `useQuizAd`, or null. */
+  ad?: ReactNode;
+  nextLabel: string;
+  onNext: () => void;
+} & Parameters<typeof RevealPanel>[0]) {
+  return (
+    <View style={{ gap: space.lg }}>
+      {ad}
+      <FadeInUp distance={24}>
+        <Button label={nextLabel} onPress={onNext} icon="arrow-forward" kind="ink" />
+      </FadeInUp>
+      <RevealPanel {...panel} />
+    </View>
+  );
+}
+
 export function RevealPanel({
   pq,
   revealed,
-  nextLabel,
-  onNext,
   badge,
   children,
 }: {
   pq: PlayableQuestion;
   revealed: AnswerLog;
-  nextLabel: string;
-  onNext: () => void;
   /** Short text on the right of the title, e.g. "+142 pts" or "−1 life". */
   badge?: string;
-  /** Extra content between the fact and the button (sponsor message, street stats). */
+  /** Extra content below the fact (sponsor message, street stats). */
   children?: ReactNode;
 }) {
   const { colors } = useTheme();
@@ -201,7 +223,6 @@ export function RevealPanel({
       </View>
       <Txt tone="text">{L(pq.question.fact)}</Txt>
       {children}
-      <Button label={nextLabel} onPress={onNext} icon="arrow-forward" kind="ink" />
     </FadeInUp>
   );
 }

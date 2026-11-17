@@ -9,6 +9,3 @@ export function useTabBarSpace(): number {
   const insets = useSafeAreaInsets();
   return TAB_BAR_HEIGHT + TAB_BAR_GAP + Math.max(insets.bottom, TAB_BAR_GAP);
 }
-
-/** Phones shorter than this get the quiz banner at the end of the page instead of pinned. */
-export const PINNED_AD_MIN_HEIGHT = 700;

@@ -5,7 +5,7 @@ import { StyleSheet, View } from 'react-native';
 import { Avatar } from '@/components/Avatar';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { Confetti, FadeInUp, Pop, PopIn, useCountUp } from '@/components/motion';
-import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { AnswerReveal, ProgressDots, QuestionView, TimerBar } from '@/components/quiz';
 import { CoinChip } from '@/components/status';
 import { Badge, Button, Card, HeroCard, Icon, Screen, SectionHeader, TopBar, Txt } from '@/components/ui';
 import { opponentName, topicKey, useDuels, type DuelView } from '@/hooks/useDuels';
@@ -136,7 +136,7 @@ function DuelTurn({ duel, theirs }: { duel: Duel; theirs?: DuelAnswer[] }) {
       />
 
       {revealed && (
-        <RevealPanel
+        <AnswerReveal
           pq={pq}
           revealed={revealed}
           badge={revealed.mark === 'correct' ? `+${revealed.points} ${t('common.pts')}` : undefined}
@@ -151,7 +151,7 @@ function DuelTurn({ duel, theirs }: { duel: Duel; theirs?: DuelAnswer[] }) {
               </Txt>
             </View>
           )}
-        </RevealPanel>
+        </AnswerReveal>
       )}
 
       <ConfirmDialog

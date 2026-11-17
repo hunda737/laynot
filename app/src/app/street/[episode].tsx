@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { useQuizAd } from '@/components/AdBanner';
 import { Confetti, FadeInUp, PopIn, useCountUp } from '@/components/motion';
-import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { AnswerReveal, ProgressDots, QuestionView, TimerBar } from '@/components/quiz';
 import { CoinChip } from '@/components/status';
 import { StreetStats } from '@/components/StreetStats';
 import { Button, HeroCard, Icon, ProgressBar, Screen, TopBar, Txt } from '@/components/ui';
@@ -120,7 +120,7 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
   }
 
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+    <Screen edges={['top', 'bottom', 'left', 'right']}>
       <TopBar
         left="close"
         center={<ProgressDots marks={answers.map((a) => a.mark)} total={items.length} current={index} />}
@@ -150,7 +150,8 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
       />
 
       {revealed && (
-        <RevealPanel
+        <AnswerReveal
+          ad={banner}
           pq={pq}
           revealed={revealed}
           badge={
@@ -174,10 +175,8 @@ function EpisodeRound({ ep, onAgain }: { ep: StreetEpisode; onAgain: () => void 
               {t('street.clipNote', { time: pq.question.clipAt })}
             </Txt>
           )}
-        </RevealPanel>
+        </AnswerReveal>
       )}
-
-      {banner.inline}
     </Screen>
   );
 }

@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { OutOfLivesSheet } from '@/components/OutOfLivesSheet';
-import { ProgressDots, QuestionView, RevealPanel, TimerBar } from '@/components/quiz';
+import { AnswerReveal, ProgressDots, QuestionView, TimerBar } from '@/components/quiz';
 import { AdBanner, useQuizAd } from '@/components/AdBanner';
 import { Confetti, FadeInUp, PopIn, useCountUp } from '@/components/motion';
 import { useRewardedAd } from '@/components/RewardedAd';
@@ -206,7 +206,7 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
   }
 
   return (
-    <Screen edges={['top', 'bottom', 'left', 'right']} footer={banner.footer}>
+    <Screen edges={['top', 'bottom', 'left', 'right']}>
       <TopBar
         left="close"
         center={<ProgressDots marks={marks} total={round.length} current={index} />}
@@ -275,7 +275,8 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
       )}
 
       {revealed && (
-        <RevealPanel
+        <AnswerReveal
+          ad={banner}
           pq={pq}
           revealed={revealed}
           badge={
@@ -287,10 +288,8 @@ function TopicRound({ category, onAgain }: { category: CategoryId; onAgain: () =
           onNext={next}
         >
           {sponsor && <SponsorStrip sponsor={sponsor} message={L(sponsor.tagline)} />}
-        </RevealPanel>
+        </AnswerReveal>
       )}
-
-      {banner.inline}
 
       <OutOfLivesSheet
         visible={outOfLives}
