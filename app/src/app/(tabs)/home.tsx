@@ -5,6 +5,7 @@ import { Animated, Pressable, ScrollView, StyleSheet, useWindowDimensions, View 
 import { AdBanner } from '@/components/AdBanner';
 import { Avatar } from '@/components/Avatar';
 import { CategoryTile } from '@/components/CategoryTile';
+import { GamesPreview } from '@/components/games/GamesPreview';
 import { FadeInUp, PressableScale, useCountUp } from '@/components/motion';
 import { CoinChip, Hearts } from '@/components/status';
 import { Badge, Button, Card, HeroCard, Icon, IconButton, ProgressBar, Screen, SectionHeader, Txt } from '@/components/ui';
@@ -50,11 +51,14 @@ export default function Home() {
   const progress = useGame((s) => s.dailyProgress);
   const topicStats = useGame((s) => s.topicStats);
   const streetResults = useGame((s) => s.streetResults);
+  const games = useGame((s) => s.gameResults);
+  const gamesPoints = useGame((s) => s.gamesPoints);
 
   const record = history[today];
-  const points = useMemo(() => Object.values(history).reduce((sum, r) => sum + r.score, 0), [history]);
+  const points = useMemo(() => Object.values(history).reduce((sum, r) => sum + r.score, 0) + gamesPoints, [history, gamesPoints]);
   const shownPoints = useCountUp(points);
-  const days = useMemo(() => weekStrip(history, streak, today), [history, streak, today]);
+  // A day with only a Games puzzle played still counts as played on the strip.
+  const days = useMemo(() => weekStrip({ ...games, ...history }, streak, today), [games, history, streak, today]);
   const streakNow = effectiveStreak(streak, today);
   const atRisk = streakAtRisk(streak, today) && !record;
   const answered = progress?.day === today ? progress.answers.length : 0;
@@ -197,7 +201,11 @@ export default function Home() {
         </ScrollView>
       </FadeInUp>
 
-      <FadeInUp index={5} style={{ gap: space.md }}>
+      <FadeInUp index={5}>
+        <GamesPreview today={games[today]} />
+      </FadeInUp>
+
+      <FadeInUp index={6} style={{ gap: space.md }}>
         <SectionHeader title={t('home.friendsTitle')} />
         <View style={styles.pair}>
           <HeroCard color={modeColors.duel} pattern="rings" onPress={() => router.push('/duels')} style={styles.mode}>
@@ -227,7 +235,7 @@ export default function Home() {
       </FadeInUp>
 
       {FEATURED && (
-        <FadeInUp index={6} style={{ gap: space.md }}>
+        <FadeInUp index={7} style={{ gap: space.md }}>
           <SectionHeader title={t('home.featured')} actionLabel={t('common.seeAll')} onAction={() => router.push('/street')} />
           <HeroCard
             color={FEATURED.color}

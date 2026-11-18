@@ -3,22 +3,24 @@ import { useMemo } from 'react';
 import { useT } from '@/i18n';
 import { dayKey } from '@/lib/clock';
 import type { Bot } from '@/data/players';
+import { dayScores } from '@/lib/games/common';
 import { buildBoard, type Period, type YouInput } from '@/lib/leaderboard';
 import { useGame } from '@/store/useGameStore';
 import { useNow } from './useNow';
 
-/** The player as the leaderboard sees them. */
+/** The player as the leaderboard sees them: each day is the Daily Challenge plus the capped games points. */
 export function useYouInput(): YouInput {
   const { t } = useT();
   const profile = useGame((s) => s.profile);
   const history = useGame((s) => s.dailyHistory);
+  const games = useGame((s) => s.gameResults);
   return useMemo(
     () => ({
       name: profile?.name ?? t('ranks.you'),
       city: '',
-      scores: Object.fromEntries(Object.values(history).map((r) => [r.day, r.score])),
+      scores: dayScores(history, games),
     }),
-    [profile, history, t],
+    [profile, history, games, t],
   );
 }
 

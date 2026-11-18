@@ -16,6 +16,7 @@ export default function TabsLayout() {
   return (
     <Tabs tabBar={(props) => <FloatingTabBar {...props} />} screenOptions={{ headerShown: false }}>
       <Tabs.Screen name="home" options={{ title: t('tabs.home'), tabBarIcon: tabIcon('home') }} />
+      <Tabs.Screen name="games" options={{ title: t('tabs.games'), tabBarIcon: tabIcon('game-controller') }} />
       <Tabs.Screen name="ranks" options={{ title: t('tabs.leaderboard'), tabBarIcon: tabIcon('trophy') }} />
       <Tabs.Screen name="profile" options={{ title: t('tabs.profile'), tabBarIcon: tabIcon('person') }} />
     </Tabs>

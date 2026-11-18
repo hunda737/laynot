@@ -23,6 +23,15 @@ import {
 import { newLeagueId, nextJoiner, type League } from '@/lib/league';
 import { liveCoins } from '@/lib/live';
 import { AD_DAILY_CAP, mergeMissed, STARTING_COINS } from '@/lib/economy';
+import {
+  DAILY_SOLVE_COINS,
+  gamesDayPoints,
+  PRACTICE_REWARD,
+  pruneGames,
+  type DayGames,
+  type GameId,
+  type GameRecord,
+} from '@/lib/games/common';
 import { FAST_REFILL_MS, gainLife, loseLife, MAX_LIVES, REFILL_MS, settleLives } from '@/lib/lives';
 import { samplePlayer } from '@/lib/sample';
 import { countCorrect, dailyCoins, type AnswerMark } from '@/lib/scoring';
@@ -114,6 +123,10 @@ interface PersistedState {
   fastRefill: boolean;
   /** Small banner ads on Home and the quiz screens. The demo controls can switch them off. */
   showBanners: boolean;
+  /** Daily puzzles from the Games tab, by day. Only the last couple of weeks are kept. */
+  gameResults: Record<DayKey, DayGames>;
+  /** Lifetime games points that counted (after the daily cap). Kept apart because old results are pruned. */
+  gamesPoints: number;
 }
 
 interface Actions {
@@ -148,6 +161,13 @@ interface Actions {
   demoSetFastFriends: (on: boolean) => void;
   /** Record a finished Live Room game and pay its coins. */
   finishLiveRoom: (score: number, correct: number, rank: number) => number;
+  /**
+   * Record a game's daily puzzle. The first result of the day counts; a second call returns it unchanged.
+   * Keeps the shared streak alive and pays coins for a solve.
+   */
+  finishGameDaily: (game: GameId, day: DayKey, result: { points: number; solved: boolean; grid: string }) => GameRecord;
+  /** End a practice puzzle. A win gives back the staked life and pays coins. Returns the coins. */
+  finishGamePractice: (won: boolean) => number;
   /** The once-a-day sponsored life. Returns false if today's is already used. */
   claimSponsoredRefill: () => boolean;
   createLeague: (name: string) => League;
@@ -195,6 +215,8 @@ const initialState = (): PersistedState => ({
   dayOffset: 0,
   fastRefill: false,
   showBanners: true,
+  gameResults: {},
+  gamesPoints: 0,
 });
 
 export const refillMsOf = (s: Pick<PersistedState, 'fastRefill'>) => (s.fastRefill ? FAST_REFILL_MS : REFILL_MS);
@@ -379,6 +401,31 @@ export const useGame = create<GameState>()(
           coins: s.coins + coins,
         }));
         return coins;
+      },
+
+      finishGameDaily: (game, day, result) => {
+        const { gameResults, streak, coins, gamesPoints } = get();
+        const existing = gameResults[day]?.[game];
+        if (existing) return existing;
+        const nextStreak = applyDailyPlay(streak, day);
+        const earned = result.solved ? DAILY_SOLVE_COINS : 0;
+        const record: GameRecord = { ...result, coins: earned, streakAfter: nextStreak.current };
+        const dayAfter: DayGames = { ...gameResults[day], [game]: record };
+        set({
+          gameResults: pruneGames({ ...gameResults, [day]: dayAfter }, day),
+          gamesPoints: gamesPoints + gamesDayPoints(dayAfter) - gamesDayPoints(gameResults[day]),
+          streak: nextStreak,
+          coins: coins + earned,
+          onboarded: true,
+        });
+        return record;
+      },
+
+      finishGamePractice: (won) => {
+        if (!won) return 0;
+        get().gainLife();
+        set((s) => ({ coins: s.coins + PRACTICE_REWARD }));
+        return PRACTICE_REWARD;
       },
 
       claimSponsoredRefill: () => {

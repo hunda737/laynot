@@ -178,7 +178,16 @@ export const categoryColors: Record<'light' | 'dark', Record<CategoryId, Categor
 };
 
 /** Game modes get their own colours, so the sponsor purple only ever means "sponsored". */
-export const modeColors = { duel: '#4338CA', live: '#A21CAF', flash: '#6D28D9', review: '#0F766E' } as const;
+export const modeColors = {
+  duel: '#4338CA',
+  live: '#A21CAF',
+  flash: '#6D28D9',
+  review: '#0F766E',
+  blitz: '#B45309',
+  wordle: '#047857',
+  groups: '#1D4ED8',
+  player: '#BE123C',
+} as const;
 
 /** Gold, silver, bronze. */
 export const medals = ['#E2A400', '#9CA3AF', '#B87333'] as const;
